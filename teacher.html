@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SmartLMS — Teacher Dashboard (Enhanced Grading)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{--purple:#5b2ea6;--muted:#f3f3f6;--card:#fff;--text:#222}
+  body{font-family:Inter,Arial,Helvetica,sans-serif;margin:0;background:#f4f6f8;color:var(--text)}
+  .app{display:flex;min-height:100vh;gap:20px}
+  /* Sidebar */
+  .sidebar{width:260px;background:#fff;border-right:1px solid #e6e9ee;padding:18px;box-sizing:border-box;display:flex;flex-direction:column}
+  .brand{font-weight:700;color:var(--purple);font-size:18px;margin-bottom:8px}
+  nav a{display:flex;align-items:center;padding:10px;border-radius:6px;color:#333;text-decoration:none;margin-bottom:6px}
+  nav a.active, nav a:hover{background:var(--muted)}
+  .nav-title{font-size:12px;color:#666;margin-top:8px;margin-bottom:6px}
+  /* Main */
+  .main{flex:1;display:flex;flex-direction:column}
+  header{min-height:60px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid #e6e9ee}
+  header h1{font-size:18px;margin:0;display:flex;align-items:center;gap:8px}
+  .menu-btn{display:none;background:#f3f3f6;border:1px solid #e6e9ee;border-radius:6px;padding:8px 10px}
+  .notif{position:relative;cursor:pointer}
+  .unread-badge{position:absolute;top:-6px;right:-6px;background:#e02424;color:#fff;border-radius:999px;padding:3px 7px;font-size:12px}
+  .notif-list{position:absolute;right:20px;top:60px;width:360px;background:#fff;border:1px solid #e6e9ee;border-radius:6px;box-shadow:0 6px 30px rgba(0,0,0,0.06);max-height:360px;overflow:auto;padding:8px;display:none;z-index:50}
+  .notif-item{padding:8px;border-bottom:1px solid #f0f0f0;font-size:13px}
+  /* content layout */
+  .content{flex:1;padding:12px;overflow:auto}
+  .grid{display:grid;gap:16px}
+  .cols-3{grid-template-columns:1fr 420px}
+  .card{background:var(--card);border:1px solid #eaeff5;padding:14px;border-radius:8px;box-shadow:0 1px 0 rgba(0,0,0,0.02)}
+  .small{font-size:13px;color:#666}
+  .button{background:var(--purple);color:#fff;padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
+  .muted{color:#666}
+  table{width:100%;border-collapse:collapse}
+  thead th{background:#fafbfc;text-align:left;padding:8px;border-bottom:1px solid #eee;font-weight:600}
+  tbody td{padding:8px;border-bottom:1px solid #f3f5f8}
+  .action-btn{padding:6px 8px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer}
+  .form-row{display:flex;gap:8px}
+  .input,textarea,select{width:100%;padding:8px;border:1px solid #d9e0ea;border-radius:6px;background:#fff}
+  .question{border:1px dashed #e6e9ee;padding:10px;border-radius:6px;margin-bottom:8px;background:#fafafa}
+  .hint{font-size:13px;color:#2b2b2b;background:#fff8e6;padding:6px;border-radius:4px;margin-top:8px;border:1px solid #ffe9a8}
+  .explanation{font-size:13px;color:#0b3b2e;background:#e8fff5;padding:6px;border-radius:4px;margin-top:6px;border:1px solid #c8f3dc;display:none}
+  .flex{display:flex;gap:10px;align-items:center}
+  .small-muted{font-size:12px;color:#777}
+  .danger{color:#b32d2d}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal{width:900px;background:#fff;border-radius:8px;padding:16px;max-height:80vh;overflow:auto}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .recent-item{font-size:13px;padding:6px;border-bottom:1px solid #f0f0f0}
+  .label{font-size:12px;color:#666}
+  .badge{display:inline-block;background:#eef2ff;color:var(--purple);padding:2px 8px;border-radius:999px;font-size:12px}
+  .empty{border:1px dashed #e6e9ee;background:#fff;padding:14px;border-radius:8px;color:#666;text-align:center}
+  footer{height:40px;background:#fff;border-top:1px solid #e6e9ee;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .small-note{font-size:12px;color:#444}
+  .grid-questions{display:grid;gap:8px}
+  .controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  @media(max-width:980px){
+    .menu-btn{display:inline-block}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .2s ease;z-index:200;display:flex;width:80vw;max-width:320px}
+    .sidebar.open{transform:translateX(0)}
+    .cols-3{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar card" id="sidebar">
+    <div class="brand">SmartLMS — Teacher</div>
+    <div class="small-muted">Welcome, <span id="teacherName">Teacher</span></div>
+    <div class="nav-title">Navigate</div>
+    <nav id="nav">
+      <a href="#" data-view="overview" class="active">🏠 Overview</a>
+      <a href="#" data-view="assignments">📝 Assignments</a>
+      <a href="#" data-view="grading">📥 Grading Hub</a>
+    </nav>
+
+    <div style="margin-top:auto">
+      <div class="small-muted" style="margin-bottom:6px">Recent activities</div>
+      <div id="sidebarRecent" style="max-height:180px;overflow:auto"></div>
+      
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <section class="main">
+    <header>
+      <h1><button class="menu-btn" id="menuBtn">☰</button> Teacher Dashboard</h1>
+      <div style="display:flex;gap:12px;align-items:center;position:relative">
+        <div class="notif" id="notifBell">
+          🔔 <span id="notifUnread" class="unread-badge" style="display:none">0</span>
+        </div>
+        <div id="profileBtn" style="cursor:pointer;user-select:none;background:#f3f3f6;border:1px solid #e6e9ee;padding:6px 10px;border-radius:999px;display:flex;align-items:center;gap:6px">
+          <span id="profileInitial">👤</span>
+          <span class="small" id="profileName" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        </div>
+      </div>
+      <div class="notif-list card" id="notifList"></div>
+      <div id="profileMenu" class="card" style="position:absolute;right:12px;top:56px;display:none;min-width:240px;padding:8px">
+        <div class="small" style="font-weight:700;margin:6px 8px">Profile</div>
+        <div><button class="action-btn" style="width:100%;text-align:left;margin:4px 0" data-prof-action="notifications">Notifications</button></div>
+        <div><button class="action-btn" style="width:100%;text-align:left;margin:4px 0" data-prof-tab="basic">Basic info</button></div>
+        <div><button class="action-btn" style="width:100%;text-align:left;margin:4px 0" data-prof-tab="academic">Academic info</button></div>
+        <div><button class="action-btn" style="width:100%;text-align:left;margin:4px 0" data-prof-tab="activity">Activity/Engagement</button></div>
+        <div><button class="action-btn" style="width:100%;text-align:left;margin:4px 0" data-prof-tab="performance">Performance analysis</button></div>
+        <div><button class="action-btn" style="width:100%;text-align:left;margin:4px 0" data-prof-tab="security">Security & account settings</button></div>
+        <div><button class="action-btn" style="width:100%;text-align:left;margin:4px 0" data-prof-tab="help">Help & support</button></div>
+        <hr style="border:none;border-top:1px solid #eee;margin:6px 0" />
+        <div><button class="action-btn" style="width:100%;text-align:left;margin:4px 0;color:#b32d2d" data-prof-action="logout">Logout</button></div>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- Overview -->
+      <div id="view-overview" class="view">
+        <div class="grid cols-3">
+          <div>
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div class="small-muted">Assignments</div>
+                  <div style="font-size:24px" id="statAssignments">0</div>
+                </div>
+                <div>
+                  <div class="small-muted">Pending</div>
+                  <div style="font-size:20px" id="statPending">0</div>
+                </div>
+              </div>
+              <hr />
+              <div class="small-muted">Overview</div>
+              <div id="overviewRecent"></div>
+            </div>
+
+            <div style="margin-top:12px" class="card">
+              <div class="small-muted">Recent Activities</div>
+              <div id="recentActivities" style="max-height:260px;overflow:auto;margin-top:8px"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="small-muted">Quick Actions</div>
+              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="button" id="btnNewAssignment">Create assignment</button>
+                <button class="button" id="btnOpenGrading">Open grading hub</button>
+              </div>
+            </div>
+
+            <div style="margin-top:12px" class="card">
+              <div class="small-muted">Notifications</div>
+              <div id="overviewNotifs" style="max-height:200px;overflow:auto;margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assignments -->
+      <div id="view-assignments" class="view" style="display:none">
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:320px">
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                <div><strong>Your Assignments</strong><div class="small">Manage publish windows, reopen, edit or delete</div></div>
+                <div><button class="button" id="createAssignmentBtn">New Assignment</button></div>
+              </div>
+              <hr />
+              <table>
+                <thead><tr><th>Title</th><th>Publish</th><th>Unpublish (Deadline)</th><th>Group?</th><th>Actions</th></tr></thead>
+                <tbody id="assignmentsTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="width:420px;max-width:100%">
+            <div class="card">
+              <div class="small-muted">Assignment Editor</div>
+              <div style="margin-top:8px">
+                <label class="label">Title</label>
+                <input id="assignTitle" class="input" />
+                <label class="label">Description</label>
+                <textarea id="assignDesc" class="input" rows="4"></textarea>
+                <div class="form-row" style="margin-top:8px">
+                  <div style="flex:1">
+                    <label class="label">Publish (date & time)</label>
+                    <input id="assignPublish" type="datetime-local" class="input" />
+                  </div>
+                  <div style="flex:1">
+                    <label class="label">Unpublish / Deadline (date & time)</label>
+                    <input id="assignUnpublish" type="datetime-local" class="input" />
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+                  <label><input type="checkbox" id="assignGroup"/> Group assignment</label>
+                  <label style="margin-left:auto">Total points <input id="assignPoints" type="number" value="100" style="width:90px" /></label>
+                </div>
+
+                <hr />
+                <div id="questionsList"></div>
+                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                  <button class="button" id="addQuestionBtn">+ Add Question</button>
+                  <button class="button" id="saveAssignmentBtn">Save Assignment</button>
+                </div>
+                <p class="small-muted" style="margin-top:8px">Hints show with questions. Explanations appear only after grading.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grading Hub -->
+      <div id="view-grading" class="view" style="display:none">
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:320px">
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                <div><strong>Submissions</strong><div class="small">Click a submission to open details</div></div>
+                <div><button class="button" id="refreshSubmissions">Refresh</button></div>
+              </div>
+              <hr />
+              <table>
+                <thead><tr><th>User</th><th>Assignment</th><th>Submitted</th><th>Status</th><th>Score</th><th>Actions</th></tr></thead>
+                <tbody id="submissionsTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="width:420px;max-width:100%">
+            <div id="submissionPanel" class="card" style="display:none">
+              <div class="topbar">
+                <div>
+                  <div id="subStudent" style="font-weight:700"></div>
+                  <div class="small-muted" id="subMeta"></div>
+                </div>
+                <div class="flex">
+                  <button class="action-btn" id="editFeedbackBtn">Edit Submission (feedback copy)</button>
+                  <button class="action-btn" id="lockToggleBtn">Lock</button>
+                </div>
+              </div>
+
+              <div id="assignmentView"></div>
+
+              <!-- Group manager -->
+              <div id="groupManager" class="card" style="background:#fafafa;border:1px dashed #e6e9ee;margin-top:10px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                  <div><strong>Group Members</strong> <span class="small-muted" id="groupMeta"></span></div>
+                  <div class="small-muted" id="groupHint">Requires at least 2 members for group assignments</div>
+                </div>
+                <div id="groupChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
+                <div class="form-row" style="margin-top:8px;gap:8px">
+                  <input id="groupEmailInput" class="input" placeholder="Add member email (student)" />
+                  <button class="action-btn" id="addGroupBtn">Add</button>
+                </div>
+                <div class="small-muted" id="groupValidation" style="color:#b32d2d;margin-top:6px"></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+                  <button class="action-btn" id="saveGroupBtn">Save Group List</button>
+                </div>
+              </div>
+
+              <hr />
+              <div>
+                <div class="controls-row">
+                  <label class="small-note">Late penalty: <input id="latePenaltyInput" type="number" value="10" style="width:70px"/>% (applies to total)</label>
+                  <button class="button" id="saveGradeBtn">Save Grade & Notify</button>
+                  <button class="button" id="releaseAllExplanationsBtn">Reveal All Explanations</button>
+                  <button class="button" id="regradeBtn" style="background:#ff9800">Regrade (unlock)</button>
+                </div>
+                <textarea id="explainInput" class="input" rows="3" placeholder="Optional general feedback to student" style="margin-top:10px"></textarea>
+                <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="action-btn" id="sendFeedbackOnlyBtn">Send Feedback Only</button></div>
+                <div style="margin-top:10px" id="gradeSummary"></div>
+                <div id="gradeHistory" style="margin-top:8px"></div>
+              </div>
+            </div>
+
+            <div id="noSubmission" class="card" style="display:block">Select a submission to view details</div>
+          </div>
+        </div>
+      </div>
+
+      
+
+    </main>
+
+    <footer>SmartLMS — Teacher view</footer>
+  </section>
+</div>
+
+<!-- Feedback modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="topbar">
+      <div><strong>Edit Feedback Copy</strong><div class="small-muted" id="feedbackFor"></div></div>
+      <div><button id="closeModal" class="action-btn">Close</button></div>
+    </div>
+    <div id="feedbackEditor"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="button" id="saveFeedbackCopy">Save & Send to Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-backdrop" id="profileModal" style="display:none">
+  <div class="modal" style="max-width:820px">
+    <div class="topbar">
+      <div><strong>Profile</strong> <span class="small-muted" id="profileEmail"></span></div>
+      <div><button id="closeProfileModal" class="action-btn">Close</button></div>
+    </div>
+    <div class="tab-nav">
+      <button class="active" data-pftab="basic">Basic info</button>
+      <button data-pftab="academic">Academic info</button>
+      <button data-pftab="activity">Activity/Engagement</button>
+      <button data-pftab="performance">Performance analysis</button>
+      <button data-pftab="security">Security & account</button>
+      <button data-pftab="help">Help & support</button>
+    </div>
+    <div id="pf-basic">
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div>
+          <label class="label">Full name</label>
+          <input id="pfName" class="input" />
+        </div>
+        <div>
+          <label class="label">Phone</label>
+          <input id="pfPhone" class="input" />
+        </div>
+      </div>
+      <div style="margin-top:10px"><button id="pfSaveBasic" class="button">Save</button></div>
+    </div>
+    <div id="pf-academic" class="hidden">
+      <div class="small-muted">Role</div>
+      <div id="pfRole" style="margin-bottom:8px"></div>
+      <div class="small-muted">Assignments created</div>
+      <div id="pfAssignCount"></div>
+    </div>
+    <div id="pf-activity" class="hidden">
+      <div class="small-muted">Recent activities</div>
+      <div id="pfRecent" style="max-height:240px;overflow:auto;margin-top:6px"></div>
+    </div>
+    <div id="pf-performance" class="hidden">
+      <div class="small-muted">Overview</div>
+      <div id="pfPerf" style="margin-top:6px"></div>
+    </div>
+      <div id="pf-security" class="hidden">
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div>
+          <label class="label">Current password</label>
+          <input id="pfCurPass" type="text" class="input" />
+        </div>
+        <div></div>
+        <div>
+          <label class="label">New password</label>
+          <input id="pfNewPass" type="password" class="input" />
+        </div>
+        <div>
+          <label class="label">Confirm new password</label>
+          <input id="pfNewPass2" type="password" class="input" />
+        </div>
+      </div>
+      <div id="pfSecErr" class="small" style="color:#b32d2d;margin-top:6px"></div>
+      <div style="margin-top:10px"><button id="pfSavePassword" class="button">Update Password</button></div>
+    </div>
+    <div id="pf-help" class="hidden">
+      <div class="small">For assistance, contact your administrator or refer to documentation provided by your institution.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------------------
+  Storage & Sessions (IndexedDB with fallback)
+----------------------------*/
+const supportsIndexedDB = typeof indexedDB !== 'undefined';
+const DB_NAME = 'smartlms-auth';
+const DB_VERSION = 3; // v3 adds per-tab sessions
+let dbInstance = null;
+
+function openDB() {
+  return new Promise((resolve) => {
+    if (!supportsIndexedDB) { resolve(null); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('users')) { const s = db.createObjectStore('users', { keyPath: 'email' }); s.createIndex('email','email',{unique:true}); }
+      if (!db.objectStoreNames.contains('meta')) { db.createObjectStore('meta', { keyPath: 'key' }); }
+      if (!db.objectStoreNames.contains('sessions')) { db.createObjectStore('sessions', { keyPath: 'id' }); }
+      if (!db.objectStoreNames.contains('assignments')) { db.createObjectStore('assignments', { keyPath: 'id' }); }
+      if (!db.objectStoreNames.contains('submissions')) { db.createObjectStore('submissions', { keyPath: ['assignmentId','student'] }); }
+      if (!db.objectStoreNames.contains('feedbackCopies')) { db.createObjectStore('feedbackCopies', { keyPath: 'id' }); }
+      if (!db.objectStoreNames.contains('activities')) { db.createObjectStore('activities', { keyPath: 'id' }); }
+    };
+    req.onsuccess = () => { dbInstance = req.result; resolve(dbInstance); };
+    req.onerror = () => { console.error('DB open error', req.error); resolve(null); };
+  });
+}
+
+function normalizeEmail(email){ return (email||'').trim().toLowerCase(); }
+
+async function idbGetAll(store) {
+  const db = await openDB();
+  if (!db) return JSON.parse(localStorage.getItem(store)) || [];
+  return new Promise((resolve) => {
+    const tx = db.transaction(store,'readonly');
+    const st = tx.objectStore(store);
+    const r = st.getAll();
+    r.onsuccess = () => resolve(r.result || []);
+    r.onerror = () => resolve([]);
+  });
+}
+async function idbPutAll(store, items) {
+  const db = await openDB();
+  if (!db) { localStorage.setItem(store, JSON.stringify(items||[])); return; }
+  return new Promise((resolve) => {
+    const tx = db.transaction(store,'readwrite');
+    const st = tx.objectStore(store);
+    st.clear();
+    (items||[]).forEach(it => st.put(it));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+}
+
+async function migrateLocalStorageToIDBIfNeeded(){
+  if(!supportsIndexedDB) return;
+  try {
+    const existingUsers = await idbGetAll('users');
+    if (existingUsers && existingUsers.length > 0) return;
+    const stores = ['users','assignments','submissions','feedbackCopies','activities'];
+    for (const s of stores) {
+      const raw = localStorage.getItem(s);
+      if (raw) {
+        try { const arr = JSON.parse(raw) || []; if (arr.length) await idbPutAll(s, arr); } catch(_){}
+      }
+    }
+    // Do not remove LS completely to preserve student pages not yet migrated, but avoid divergence for users
+    localStorage.removeItem('users');
+  } catch(e){ console.warn('migration failed', e); }
+}
+
+// Per-tab session helpers
+function getSessionId(){
+  let sid = sessionStorage.getItem('sessionId');
+  if(!sid){ sid = 's_'+Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('sessionId', sid); }
+  return sid;
+}
+async function setCurrentUser(user){
+  const sid = getSessionId();
+  if(supportsIndexedDB){
+    try{
+      const db = await openDB();
+      if(db){ await new Promise((resolve)=>{ const tx=db.transaction('sessions','readwrite'); tx.objectStore('sessions').put({id:sid,user}); tx.oncomplete=()=>resolve(); tx.onerror=()=>resolve(); }); return; }
+    }catch(_){ }
+  }
+  sessionStorage.setItem('currentUser', JSON.stringify(user));
+}
+async function getCurrentUser(){
+  const sid = getSessionId();
+  if(supportsIndexedDB){
+    try{
+      const db = await openDB();
+      if(db){ return await new Promise((resolve)=>{ const tx=db.transaction('sessions','readonly'); const r=tx.objectStore('sessions').get(sid); r.onsuccess=()=>resolve(r.result? r.result.user:null); r.onerror=()=>resolve(null); }); }
+    }catch(_){ }
+  }
+  const raw = sessionStorage.getItem('currentUser');
+  return raw? JSON.parse(raw) : null;
+}
+async function clearCurrentUser(){
+  const sid = getSessionId();
+  if(supportsIndexedDB){
+    try{ const db=await openDB(); if(db){ await new Promise((resolve)=>{ const tx=db.transaction('sessions','readwrite'); tx.objectStore('sessions').delete(sid); tx.oncomplete=()=>resolve(); tx.onerror=()=>resolve(); }); } }catch(_){ }
+  }
+  sessionStorage.removeItem('currentUser');
+}
+
+// Convenience wrappers with callback API for existing code
+function readUsers(cb){ idbGetAll('users').then(cb); }
+function writeUsers(users, cb){ idbPutAll('users', users).then(()=>cb && cb()); }
+function readAssignments(cb){ idbGetAll('assignments').then(cb); }
+function writeAssignments(items, cb){ idbPutAll('assignments', items).then(()=>cb && cb()); }
+function readSubmissions(cb){ idbGetAll('submissions').then(cb); }
+function writeSubmissions(items, cb){ idbPutAll('submissions', items).then(()=>cb && cb()); }
+function readFeedbacks(cb){ idbGetAll('feedbackCopies').then(cb); }
+function writeFeedbacks(items, cb){ idbPutAll('feedbackCopies', items).then(()=>cb && cb()); }
+function readActivities(cb){ idbGetAll('activities').then(cb); }
+function writeActivities(items, cb){ idbPutAll('activities', items).then(()=>cb && cb()); }
+
+/* ---------------------------
+  Session & RBAC (per tab)
+----------------------------*/
+let currentTeacher = null; let currentEmail = null;
+async function requireTeacher(cb){
+  // Legacy migration: if old LS currentUser exists or currentUserEmail exists, try to hydrate session once
+  try{
+    const legacyObj = localStorage.getItem('currentUser');
+    if(legacyObj){ const parsed = JSON.parse(legacyObj); await setCurrentUser(parsed); localStorage.removeItem('currentUser'); }
+    const legacyEmail = localStorage.getItem('currentUserEmail');
+    if(legacyEmail){ const email=legacyEmail.toLowerCase(); readUsers(users=>{ const u=users.find(x=>x.email===email); if(u){ setCurrentUser(u).then(()=>{}); } localStorage.removeItem('currentUserEmail'); }); }
+  }catch(_){ }
+
+  const user = await getCurrentUser();
+  if(!user){ alert('Access denied — please login'); window.location.href='index.html'; return; }
+  if(user.role !== 'teacher'){ alert('Access denied — teacher only'); window.location.href='index.html'; return; }
+  if(user.active === false){ alert('Your account has been deactivated'); window.location.href='index.html'; return; }
+  currentTeacher = user; currentEmail = (user.email||'').toLowerCase();
+  document.getElementById('teacherName').innerText = user.fullName || 'Teacher';
+  document.getElementById('teacherNameInput').value = user.fullName || '';
+  if(cb) cb(user);
+}
+
+// ===== Maintenance banner (upcoming countdown) =====
+async function getMaintenance(){
+  const db = await openDB();
+  if(!db){ try { return JSON.parse(localStorage.getItem('maintenance')||'{}')||{}; } catch(_) { return {}; } }
+  return new Promise((resolve)=>{ const tx=db.transaction('meta','readonly'); const st=tx.objectStore('meta'); const r=st.get('maintenance'); r.onsuccess=()=>resolve(r.result? r.result.value:{}); r.onerror=()=>resolve({}); });
+}
+function isActiveMaintenance(m){ const now=Date.now(); if(m.enabled && m.manualUntil && now<m.manualUntil) return true; const s=Array.isArray(m.schedules)?m.schedules:[]; return s.some(x=> now>=x.startAt && now<=x.endAt); }
+function getUpcomingMaintenance(m){ const now=Date.now(); const s=(Array.isArray(m.schedules)?m.schedules:[]).filter(x=>x.startAt>now).sort((a,b)=>a.startAt-b.startAt); return s[0]||null; }
+function ensureMaintBanner(){ let b=document.getElementById('maintBanner'); if(!b){ b=document.createElement('div'); b.id='maintBanner'; b.style.cssText='position:sticky;top:0;z-index:50;background:#fff4c2;border-bottom:1px solid #e6e9ee;padding:6px 10px;text-align:center;font-size:13px;display:none'; const hdr=document.querySelector('header'); hdr.parentNode.insertBefore(b, hdr.nextSibling);} return b; }
+let __maintTick;
+async function showUpcomingMaintenanceIfAny(){
+  const m = await getMaintenance();
+  if(isActiveMaintenance(m)){
+    alert(`System is currently undergoing maintenance. Try again after ${new Date((m.manualUntil)||Date.now()).toLocaleString()}. Thank you.`);
+    await clearCurrentUser(); window.location.href='index.html'; return;
+  }
+  const up = getUpcomingMaintenance(m); const banner = ensureMaintBanner();
+  if(up){
+    banner.style.display='block';
+    function tick(){
+      const remain = Math.max(0, up.startAt - Date.now());
+      const h = Math.floor(remain/3600000);
+      const mm = Math.floor((remain%3600000)/60000);
+      const ss = Math.floor((remain%60000)/1000);
+      banner.textContent = `Upcoming system maintenance: ${new Date(up.startAt).toLocaleString()} — starts in ${h}h ${mm}m ${ss}s`;
+      if(remain<=0 && __maintTick){ clearInterval(__maintTick); }
+    }
+    if(__maintTick) clearInterval(__maintTick);
+    tick(); __maintTick = setInterval(tick, 1000);
+  } else {
+    banner.style.display='none'; if(__maintTick) clearInterval(__maintTick);
+  }
+}
+
+// Listen for maintenance broadcasts (fallback when IndexedDB sessions unavailable)
+try {
+  const __maintBC = new BroadcastChannel('smartlms_maint');
+  __maintBC.onmessage = async (ev)=>{
+    const msg = ev.data||{};
+    if(msg.type==='maintenance_active' || msg.type==='force_logout'){
+      const me = await getCurrentUser();
+      if(me && me.role !== 'admin'){ await clearCurrentUser(); window.location.href='index.html'; return; }
+    }
+    if(msg.type==='maintenance_active' || msg.type==='maintenance_disabled' || msg.type==='force_logout'){
+      await showUpcomingMaintenanceIfAny();
+    }
+  };
+} catch(_) {}
+window.addEventListener('storage', async (e)=>{
+  if(e.key==='smartlms_maint_broadcast'){
+    try{ const msg = JSON.parse(e.newValue||'{}')||{}; if(msg.type==='maintenance_active' || msg.type==='force_logout'){ const me=await getCurrentUser(); if(me && me.role!=='admin'){ await clearCurrentUser(); window.location.href='index.html'; return; } } }catch(_){ }
+    await showUpcomingMaintenanceIfAny();
+  }
+});
+
+// Listen for admin forced logout of a single user (broadcast-only)
+try {
+  const bc2 = new BroadcastChannel('smartlms_maint');
+  bc2.onmessage = async (ev)=>{
+    const msg = ev.data||{};
+    if(msg.type==='force_logout_user'){
+      const email = (msg.payload&&msg.payload.email||'').toLowerCase();
+      const me = await getCurrentUser();
+      if(me && (me.email||'').toLowerCase()===email){ await clearCurrentUser(); window.location.href='index.html'; }
+    }
+  };
+} catch(_) {}
+
+/* ---------------------------
+  Mobile nav
+----------------------------*/
+const sidebarEl = document.getElementById('sidebar');
+document.getElementById('menuBtn').addEventListener('click', ()=> sidebarEl.classList.toggle('open'));
+
+/* ---------------------------
+  UI navigation
+----------------------------*/
+const navLinks = document.querySelectorAll('#nav a');
+navLinks.forEach(a=> a.addEventListener('click', e=>{
+  e.preventDefault();
+  navLinks.forEach(x=>x.classList.remove('active'));
+  a.classList.add('active');
+  const v = a.dataset.view;
+  showView(v);
+}));
+function showView(view){
+  document.querySelectorAll('.view').forEach(v=> v.style.display='none');
+  const el = document.getElementById('view-' + view);
+  if(el) el.style.display = 'block';
+  navLinks.forEach(x=> x.classList.toggle('active', x.dataset.view === view));
+}
+
+/* ---------------------------
+  Notifications
+----------------------------*/
+function pushNotificationToUser(email, message){
+  readUsers(users=>{
+    const u = users.find(x=> normalizeEmail(x.email) === normalizeEmail(email));
+    if(!u) return;
+    u.notifications = u.notifications || [];
+    u.notifications.push({id:Date.now()+Math.random(), message, timestamp:Date.now(), read:false});
+    writeUsers(users, ()=>{ addActivity(`Notification sent to ${email}: ${message}`); refreshNotifUI(); });
+  });
+}
+
+function refreshNotifUI(){
+  if(!currentTeacher) return;
+  readUsers(users=>{
+    const me = users.find(u=> (u.email||'').toLowerCase() === currentEmail);
+    const notifs = (me && me.notifications) ? me.notifications.slice().reverse() : [];
+    const unread = notifs.filter(n=>!n.read).length;
+    const ub = document.getElementById('notifUnread');
+    if(unread>0){ ub.innerText = unread; ub.style.display='inline-block'; } else ub.style.display='none';
+    const list = document.getElementById('notifList');
+    list.innerHTML = notifs.map(n=>`<div class="notif-item" data-id="${n.id}"><div style="font-size:13px">${escapeHtml(n.message)}</div><div class="small-muted">${new Date(n.timestamp).toLocaleString()}</div></div>`).join('');
+  });
+}
+document.getElementById('notifBell').addEventListener('click', ()=>{
+  const nl = document.getElementById('notifList');
+  nl.style.display = nl.style.display === 'block' ? 'none' : 'block';
+  readUsers(users=>{
+    const me = users.find(u=> (u.email||'').toLowerCase() === currentEmail);
+    if(me && me.notifications){
+      me.notifications.forEach(n=> n.read = true);
+      writeUsers(users, ()=> refreshNotifUI());
+    }
+  });
+});
+
+// Profile menu
+const profileBtn = document.getElementById('profileBtn');
+const profileMenu = document.getElementById('profileMenu');
+profileBtn.addEventListener('click', ()=>{
+  const show = getComputedStyle(profileMenu).display === 'none';
+  profileMenu.style.display = show ? 'block':'none';
+});
+document.addEventListener('click', (e)=>{
+  if(!profileBtn.contains(e.target) && !profileMenu.contains(e.target)){
+    profileMenu.style.display = 'none';
+  }
+});
+profileMenu.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-prof-tab]');
+  const actBtn = e.target.closest('button[data-prof-action]');
+  if(btn){
+    const tab = btn.getAttribute('data-prof-tab');
+    openProfileModal(tab);
+    profileMenu.style.display = 'none';
+  } else if(actBtn){
+    const act = actBtn.getAttribute('data-prof-action');
+    if(act==='notifications'){
+      // open notifications list
+      const nl = document.getElementById('notifList');
+      nl.style.display = 'block';
+      refreshNotifUI();
+    }
+    if(act==='logout'){
+      clearCurrentUser().then(()=>{ window.location.href='index.html'; });
+    }
+    profileMenu.style.display = 'none';
+  }
+});
+
+function openProfileModal(tab){
+  const modal = document.getElementById('profileModal');
+  modal.style.display='flex';
+  // tab switch
+  document.querySelectorAll('[data-pftab]').forEach(b=> b.classList.remove('active'));
+  document.querySelectorAll('[id^="pf-"]').forEach(sec=> sec.classList.add('hidden'));
+  const tBtn = document.querySelector(`[data-pftab="${tab}"]`) || document.querySelector('[data-pftab="basic"]');
+  const sec = document.getElementById(`pf-${tab}`) || document.getElementById('pf-basic');
+  tBtn.classList.add('active'); sec.classList.remove('hidden');
+
+  // populate content
+  readUsers(users=>{
+    const me = users.find(u=> (u.email||'').toLowerCase()===currentEmail);
+    document.getElementById('profileEmail').innerText = me?.email || '';
+    document.getElementById('pfName').value = me?.fullName || '';
+    document.getElementById('pfPhone').value = me?.phone || '';
+    document.getElementById('pfRole').innerText = me?.role || '';
+    // counts
+    readAssignments(assigns=>{
+      const count = (assigns||[]).filter(a=> (a.createdBy||'').toLowerCase()===currentEmail).length;
+      document.getElementById('pfAssignCount').innerText = String(count);
+    });
+    // recent
+    readActivities(acts=>{
+      const rev = (acts||[]).slice().reverse().slice(0,20);
+      document.getElementById('pfRecent').innerHTML = rev.map(a=>`<div class="recent-item">${new Date(a.ts).toLocaleString()} — ${escapeHtml(a.text)}</div>`).join('') || '<div class="small">No recent items</div>';
+    });
+    // performance (basic placeholder using lockouts/attempts)
+    const attempts = me?.failedAttempts || 0;
+    const lockouts = me?.lockouts || 0;
+    document.getElementById('pfPerf').innerHTML = `<div class="small">Failed attempts: ${attempts} • Lockouts: ${lockouts}</div>`;
+  });
+}
+document.getElementById('closeProfileModal').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
+document.querySelectorAll('[data-pftab]').forEach(btn=>{
+  btn.addEventListener('click', (e)=>{
+    document.querySelectorAll('[data-pftab]').forEach(b=> b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    const tab = e.currentTarget.getAttribute('data-pftab');
+    document.querySelectorAll('[id^="pf-"]').forEach(sec=> sec.classList.add('hidden'));
+    document.getElementById(`pf-${tab}`).classList.remove('hidden');
+  });
+});
+
+// Profile saves
+document.getElementById('pfSaveBasic').addEventListener('click', ()=>{
+  const name = document.getElementById('pfName').value.trim();
+  const phone = document.getElementById('pfPhone').value.trim();
+  readUsers(users=>{
+    const idx = users.findIndex(u=> (u.email||'').toLowerCase()===currentEmail);
+    if(idx>=0){ users[idx].fullName = name; users[idx].phone = phone; writeUsers(users, ()=>{ addActivity('Updated basic profile info'); renderOverview(); alert('Saved'); }); }
+  });
+});
+document.getElementById('pfSavePassword').addEventListener('click', ()=>{
+  const cur = document.getElementById('pfCurPass').value;
+  const n1 = document.getElementById('pfNewPass').value;
+  const n2 = document.getElementById('pfNewPass2').value;
+  const err = document.getElementById('pfSecErr'); err.innerText = '';
+  if(!n1 || n1!==n2){ err.innerText = 'Passwords do not match.'; return; }
+  // simple strength check
+  if(n1.length<8 || !/[A-Za-z]/.test(n1) || !/\d/.test(n1)){ err.innerText='Password must be at least 8 chars, include letters and numbers.'; return; }
+  readUsers(users=>{
+    const me = users.find(u=> (u.email||'').toLowerCase()===currentEmail);
+    if(!me) return;
+    // show current password field but do not enforce match to allow admins who forced reset
+    me.password = n1; me.resetRequest = null;
+    writeUsers(users, ()=>{ addActivity('Updated password in profile'); alert('Password updated'); document.getElementById('pfCurPass').value=''; document.getElementById('pfNewPass').value=''; document.getElementById('pfNewPass2').value=''; });
+  });
+});
+
+/* ---------------------------
+  Activities
+----------------------------*/
+function addActivity(text){
+  readActivities(arr=>{
+    arr = arr || [];
+    arr.push({id:Date.now()+Math.random(), text, ts:Date.now()});
+    if(arr.length>200) arr.shift();
+    writeActivities(arr, ()=> renderRecentActivities());
+  });
+}
+function renderRecentActivities(){
+  readActivities(arr=>{
+    const list = document.getElementById('recentActivities');
+    const sidebar = document.getElementById('sidebarRecent');
+    if(!arr || arr.length===0){ list.innerHTML = '<div class="small-muted">No recent activity</div>'; sidebar.innerHTML=''; return; }
+    const rev = arr.slice().reverse();
+    list.innerHTML = rev.slice(0,50).map(a=>`<div class="recent-item">${new Date(a.ts).toLocaleString()} — ${escapeHtml(a.text)}</div>`).join('');
+    sidebar.innerHTML = rev.slice(0,6).map(a=>`<div class="recent-item">${escapeHtml(a.text)}</div>`).join('');
+  });
+}
+
+/* ---------------------------
+  Assignments UI & logic
+----------------------------*/
+let editingAssignmentId = null;
+function newQuestionBlock(q){
+  const id = 'q_'+(Math.random().toString(36).slice(2,8));
+  const container = document.createElement('div');
+  container.className = 'question';
+  container.dataset.qid = id;
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Question</strong>
+      <button class="action-btn removeQuestion">Remove</button>
+    </div>
+    <textarea class="qtext input" rows="2" placeholder="Question text">${q?.text||''}</textarea>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <select class="qtype input" style="width:160px">
+        <option value="essay">Essay</option>
+        <option value="file">File upload</option>
+        <option value="link">Link</option>
+      </select>
+      <input class="qpoints input" placeholder="Points" style="width:120px" value="${q?.points||10}" />
+    </div>
+    <div class="qsettings" style="margin-top:8px"></div>
+    <div class="q-attach" style="margin-top:8px">
+      <div class="small-muted">Teacher attachments (visible to students)</div>
+      <div class="q-drop" style="border:1px dashed #e6e9ee;padding:10px;border-radius:6px;background:#fcfcfc;margin-top:6px;text-align:center;cursor:pointer">
+        Drag & drop files here or click to choose
+        <input type="file" class="q-attach-input" multiple style="display:none" />
+      </div>
+      <div class="q-attach-list" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div>
+      <input type="hidden" class="q-attach-data" />
+    </div>
+    <div style="margin-top:6px">
+      <label class="label">Hint (visible with question)</label>
+      <textarea class="qhint input" rows="2" placeholder="Hint">${q?.hint||''}</textarea>
+      <label class="label">Explanation (visible after grading)</label>
+      <textarea class="qexp input" rows="2" placeholder="Explanation">${q?.explanation||''}</textarea>
+    </div>
+  `;
+  container.querySelector('.removeQuestion').addEventListener('click', ()=>{ container.remove(); });
+  if(q?.type) container.querySelector('.qtype').value = q.type;
+  function renderSettings(){
+    const type = container.querySelector('.qtype').value;
+    const wrap = container.querySelector('.qsettings');
+    if(type === 'essay'){
+      wrap.innerHTML = `
+        <div class="small-muted">Essay response: unlimited text allowed.</div>
+      `;
+    } else if(type === 'file'){
+      const meta = q?.meta || {};
+      const allowMultiple = meta.allowMultiple ? 'checked' : '';
+      const maxMB = meta.maxSizeMB != null ? meta.maxSizeMB : 100;
+      const ext = Array.isArray(meta.allowedExtensions) ? meta.allowedExtensions : ['pdf','doc','docx','ppt','pptx','xls','xlsx','jpg','jpeg','png','gif','mp4','mov','avi','mp3','wav'];
+      wrap.innerHTML = `
+        <div class="small-muted">File upload: students can drag & drop files. Choose allowed types and limits.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <label class="small-muted">Max size (MB): <input type="number" class="q-file-maxmb input" value="${maxMB}" style="width:90px"></label>
+          <label class="small-muted"><input type="checkbox" class="q-file-multi" ${allowMultiple}> Allow multiple files</label>
+        </div>
+        <div style="margin-top:6px">
+          <label class="label">Allowed extensions (comma-separated)</label>
+          <input class="q-file-ext input" placeholder="e.g. pdf, docx, pptx, mp4, mp3, jpg" value="${ext.join(', ')}">
+        </div>
+      `;
+    } else if(type === 'link'){
+      const meta = q?.meta || {};
+      const url = meta.resourceUrl || '';
+      wrap.innerHTML = `
+        <div class="small-muted">Attach an external URL (e.g., Google Form, Microsoft Form, any link). Students will see this link in the question.</div>
+        <input class="q-link-url input" placeholder="https://..." value="${url}">
+        <div class="small-muted" style="margin-top:6px">Preview:</div>
+        <div class="q-link-preview" style="margin-top:6px"></div>
+      `;
+      const urlInput = wrap.querySelector('.q-link-url');
+      const preview = wrap.querySelector('.q-link-preview');
+      function updatePreview(){
+        const v = (urlInput.value||'').trim();
+        if(!v){ preview.innerHTML=''; return; }
+        const safe = v.replace(/"/g,'');
+        const isEmb = /(docs.google.com|forms\.gle|form\.office\.com)/.test(safe);
+        preview.innerHTML = `<a href="${safe}" target="_blank" rel="noopener">Open link in new tab</a>` + (isEmb ? `<div style="margin-top:6px"><iframe src="${safe}" style="width:100%;height:320px;border:1px solid #e6e9ee;border-radius:6px" sandbox="allow-forms allow-scripts allow-same-origin allow-popups"></iframe></div>` : '');
+      }
+      urlInput.addEventListener('input', updatePreview);
+      updatePreview();
+    } else {
+      wrap.innerHTML = '';
+    }
+  }
+  renderSettings();
+  container.querySelector('.qtype').addEventListener('change', renderSettings);
+  // --- Attachments management ---
+  const attachDataInput = container.querySelector('.q-attach-data');
+  const attachList = container.querySelector('.q-attach-list');
+  const drop = container.querySelector('.q-drop');
+  const fileInput = container.querySelector('.q-attach-input');
+  let attachments = Array.isArray(q?.meta?.attachments)? q.meta.attachments.slice() : [];
+
+  function setAttachments(arr){
+    attachments = arr;
+    attachDataInput.value = JSON.stringify(attachments);
+    renderAttachList();
+  }
+  function renderAttachList(){
+    attachList.innerHTML = '';
+    attachments.forEach((a, idx)=>{
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.padding='8px'; card.style.border='1px solid #eee';
+      card.innerHTML = `
+        <div class="small" style="display:flex;gap:8px;align-items:center">
+          ${a.type && a.type.startsWith('image/') ? `<img src="${a.dataUrl}" alt="${a.name}" style="width:72px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #eee">` : '<div style="width:72px;height:48px;border:1px solid #eee;border-radius:4px;display:flex;align-items:center;justify-content:center">📄</div>'}
+          <div style="min-width:180px;max-width:360px;word-break:break-all">
+            <div>${a.name}</div>
+            <a href="${a.dataUrl}" download="${a.name}" target="_blank" rel="noopener">Preview/Download</a>
+          </div>
+          <button class="action-btn" data-idx="${idx}" style="margin-left:auto">Remove</button>
+        </div>`;
+      card.querySelector('button').addEventListener('click', ()=>{
+        const copy = attachments.slice();
+        copy.splice(idx,1);
+        setAttachments(copy);
+      });
+      attachList.appendChild(card);
+    });
+  }
+  async function filesToAttachments(files){
+    const arr = [];
+    for(const f of files){
+      const dataUrl = await new Promise((resolve)=>{ const r = new FileReader(); r.onload=()=>resolve(r.result); r.onerror=()=>resolve(null); r.readAsDataURL(f); });
+      if(!dataUrl) continue;
+      arr.push({ name: f.name, size: f.size, type: f.type, dataUrl });
+    }
+    return arr;
+  }
+  drop.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', async ()=>{
+    const newAtt = await filesToAttachments(fileInput.files||[]);
+    setAttachments([...(attachments||[]), ...newAtt]);
+    fileInput.value = '';
+  });
+  drop.addEventListener('dragover', (e)=>{ e.preventDefault(); drop.style.background='#f7f7f7'; });
+  drop.addEventListener('dragleave', ()=>{ drop.style.background='#fcfcfc'; });
+  drop.addEventListener('drop', async (e)=>{
+    e.preventDefault(); drop.style.background='#fcfcfc';
+    const dt = e.dataTransfer; if(!dt) return;
+    const files = dt.files; if(!files || !files.length) return;
+    const newAtt = await filesToAttachments(files);
+    setAttachments([...(attachments||[]), ...newAtt]);
+  });
+  setAttachments(attachments);
+  return container;
+}
+
+document.getElementById('addQuestionBtn').addEventListener('click', ()=>{ document.getElementById('questionsList').appendChild(newQuestionBlock()); });
+
+// Save assignment
+document.getElementById('saveAssignmentBtn').addEventListener('click', ()=>{
+  const title = document.getElementById('assignTitle').value.trim();
+  const desc = document.getElementById('assignDesc').value.trim();
+  const publish = document.getElementById('assignPublish').value;
+  const unpublish = document.getElementById('assignUnpublish').value;
+  const group = document.getElementById('assignGroup').checked;
+  const totalPoints = Number(document.getElementById('assignPoints').value) || 100;
+
+  if(!title || !publish || !unpublish){ alert('Please provide title, publish and unpublish times'); return; }
+  const publishTs = new Date(publish).getTime();
+  const unpublishTs = new Date(unpublish).getTime();
+  if(isNaN(publishTs) || isNaN(unpublishTs) || unpublishTs <= publishTs){ alert('Please ensure publish < unpublish'); return; }
+
+  const qNodes = Array.from(document.querySelectorAll('#questionsList .question'));
+  if(qNodes.length===0){ if(!confirm('No questions added. Continue?')) return; }
+  const questions = qNodes.map(qn=>{
+    return {
+      id: qn.dataset.qid,
+      text: qn.querySelector('.qtext').value,
+      type: qn.querySelector('.qtype').value,
+      points: Number(qn.querySelector('.qpoints').value) || 0,
+      meta: (()=>{
+        const type = qn.querySelector('.qtype').value;
+        if(type==='file'){
+          const max = Number(qn.querySelector('.q-file-maxmb')?.value || 100) || 100;
+          const multi = !!qn.querySelector('.q-file-multi')?.checked;
+          const ext = (qn.querySelector('.q-file-ext')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
+          let atts = [];
+          try { atts = JSON.parse(qn.querySelector('.q-attach-data')?.value || '[]'); } catch(_){ atts = []; }
+          return { maxSizeMB: max, allowMultiple: multi, allowedExtensions: ext, attachments: atts };
+        }
+        if(type==='link'){
+          const url = (qn.querySelector('.q-link-url')?.value || '').trim();
+          let atts = [];
+          try { atts = JSON.parse(qn.querySelector('.q-attach-data')?.value || '[]'); } catch(_){ atts = []; }
+          return { resourceUrl: url, attachments: atts };
+        }
+        if(type==='essay'){
+          // currently unlimited; reserved for future optional max
+          let atts = [];
+          try { atts = JSON.parse(qn.querySelector('.q-attach-data')?.value || '[]'); } catch(_){ atts = []; }
+          return { maxChars: null, attachments: atts };
+        }
+        let atts = [];
+        try { atts = JSON.parse(qn.querySelector('.q-attach-data')?.value || '[]'); } catch(_){ atts = []; }
+        return { attachments: atts };
+      })(),
+      hint: qn.querySelector('.qhint').value,
+      explanation: qn.querySelector('.qexp').value
+    };
+  });
+
+  readAssignments(assigns=>{
+    if(!assigns) assigns=[];
+    const id = editingAssignmentId || ('a_'+Date.now());
+    const assignment = {
+      id,
+      title, description:desc,
+      publishTs, unpublishTs,
+      totalPoints,
+      questions,
+      groupRequired: group,
+      createdBy: currentEmail,
+      archived: false,
+      versions: []
+    };
+    const existing = assigns.find(a=>a.id===id);
+    if(existing){
+      assignment.versions = existing.versions || [];
+      assigns = assigns.map(a=> a.id===id?assignment:a);
+      addActivity(`Edited assignment "${title}"`);
+    } else {
+      assigns.push(assignment);
+      addActivity(`Created assignment "${title}"`);
+    }
+    writeAssignments(assigns, ()=> {
+      alert('Assignment saved');
+      editingAssignmentId = null;
+      renderAssignmentsTable();
+    });
+  });
+});
+
+document.getElementById('createAssignmentBtn').addEventListener('click', ()=>{
+  editingAssignmentId = null;
+  document.getElementById('assignTitle').value='';
+  document.getElementById('assignDesc').value='';
+  document.getElementById('questionsList').innerHTML='';
+  document.getElementById('assignGroup').checked=false;
+  document.getElementById('assignPublish').value = new Date().toISOString().slice(0,16);
+  document.getElementById('assignUnpublish').value = new Date(Date.now()+3600*1000).toISOString().slice(0,16);
+  showView('assignments');
+});
+
+function renderAssignmentsTable(){
+  readAssignments(assigns=>{
+    assigns = (assigns||[]).filter(a=> normalizeEmail(a.createdBy) === currentEmail);
+    const tbody = document.getElementById('assignmentsTable');
+    tbody.innerHTML = assigns.map(a=>{
+      const pub = new Date(a.publishTs).toLocaleString();
+      const up = new Date(a.unpublishTs).toLocaleString();
+      return `<tr>
+        <td>${escapeHtml(a.title)}</td>
+        <td>${pub}</td>
+        <td>${up}</td>
+        <td>${a.groupRequired? 'Yes' : 'No'}</td>
+        <td>
+          <button class="action-btn" data-id="${a.id}" data-act="edit">Edit</button>
+          <button class="action-btn" data-id="${a.id}" data-act="reopen">Reopen</button>
+          <button class="action-btn" data-id="${a.id}" data-act="delete">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const id = b.dataset.id, act=b.dataset.act;
+        if(act==='edit') editAssignment(id);
+        if(act==='reopen') reopenAssignment(id);
+        if(act==='delete') deleteAssignment(id);
+      });
+    });
+    document.getElementById('statAssignments').innerText = (assigns.length || 0);
+  });
+}
+
+function editAssignment(id){
+  readAssignments(assigns=>{
+    const a = assigns.find(x=>x.id===id);
+    if(!a) return alert('Assignment not found');
+    editingAssignmentId = id;
+    document.getElementById('assignTitle').value = a.title;
+    document.getElementById('assignDesc').value = a.description || '';
+    document.getElementById('assignPublish').value = new Date(a.publishTs).toISOString().slice(0,16);
+    document.getElementById('assignUnpublish').value = new Date(a.unpublishTs).toISOString().slice(0,16);
+    document.getElementById('assignGroup').checked = !!a.groupRequired;
+    document.getElementById('assignPoints').value = a.totalPoints || 100;
+    const qList = document.getElementById('questionsList');
+    qList.innerHTML = '';
+    (a.questions || []).forEach(q=>{ qList.appendChild(newQuestionBlock(q)); });
+    showView('assignments');
+  });
+}
+
+function reopenAssignment(id){
+  readAssignments(assigns=>{
+    const a = assigns.find(x=>x.id===id);
+    if(!a) return alert('Assignment not found');
+    const newPub = prompt('Enter new publish date/time (YYYY-MM-DDThh:mm)', new Date().toISOString().slice(0,16));
+    const newUnpub = prompt('Enter new unpublish (deadline) date/time (YYYY-MM-DDThh:mm)', new Date(Date.now()+24*3600*1000).toISOString().slice(0,16));
+    if(!newPub || !newUnpub) return;
+    const pTs = new Date(newPub).getTime();
+    const uTs = new Date(newUnpub).getTime();
+    if(uTs <= pTs){ return alert('Invalid times'); }
+    a.versions = a.versions || [];
+    a.versions.push({publishTs:a.publishTs, unpublishTs:a.unpublishTs, ts:Date.now()});
+    a.publishTs = pTs; a.unpublishTs = uTs;
+    writeAssignments(assigns, ()=>{
+      addActivity(`Reopened assignment "${a.title}"`);
+      readUsers(users=>{ users.forEach(u=>{ if(u.role==='student'){ pushNotificationToUser(u.email, `Assignment "${a.title}" has been reopened until ${new Date(a.unpublishTs).toLocaleString()}`); } }); });
+      renderAssignmentsTable();
+    });
+  });
+}
+
+function deleteAssignment(id){
+  if(!confirm('Delete assignment permanently?')) return;
+  readAssignments(assigns=>{
+    const updated = (assigns||[]).filter(a=>a.id!==id);
+    writeAssignments(updated, ()=>{ addActivity('Deleted assignment'); renderAssignmentsTable(); });
+  });
+}
+
+/* ---------------------------
+  Submissions & Grading (ENHANCED)
+----------------------------*/
+function refreshSubmissionsTable(){
+  readSubmissions(subs=>{
+    readAssignments(assigns=>{
+      readUsers(users=>{
+        subs = subs || [];
+        const teacherAssignIds = (assigns||[]).filter(a=> normalizeEmail(a.createdBy) === currentEmail).map(a=>a.id);
+        const subsForTeacher = subs.filter(s=> teacherAssignIds.includes(s.assignmentId) );
+        const tbody = document.getElementById('submissionsTable');
+        tbody.innerHTML = subsForTeacher.map(s=>{
+          const as = (assigns||[]).find(a=>a.id===s.assignmentId) || {title:'(deleted)', totalPoints:0};
+          const student = (users||[]).find(u=> normalizeEmail(u.email)===normalizeEmail(s.studentEmail||s.student||'')) || {fullName:(s.studentEmail||s.student||'')};
+          const status = s.graded ? 'Graded' : (s.locked ? 'Locked' : 'Pending');
+          const submitted = s.submittedAt ? new Date(s.submittedAt).toLocaleString() : '-';
+          const score = (s.score===null || s.score===undefined) ? '-' : `${s.score} / ${as.totalPoints||0}`;
+          return `<tr>
+            <td>${escapeHtml(student.fullName||student.email||'')}</td>
+            <td>${escapeHtml(as.title)}</td>
+            <td>${submitted}</td>
+            <td>${status}</td>
+            <td>${score}</td>
+            <td>
+              <button class="action-btn" data-id="${s.id||`${s.assignmentId}::${s.student||s.studentEmail}`}" data-act="open">Open</button>
+              <button class="action-btn" data-id="${s.id||`${s.assignmentId}::${s.student||s.studentEmail}`}" data-act="edit">Edit Copy</button>
+            </td>
+          </tr>`;
+        }).join('');
+        tbody.querySelectorAll('button').forEach(b=>{
+          b.addEventListener('click', ()=>{
+            const id = b.dataset.id, act=b.dataset.act;
+            if(act==='open') openSubmissionDetail(id);
+            if(act==='edit') openFeedbackModalFor(id);
+          });
+        });
+        document.getElementById('statPending').innerText = subsForTeacher.filter(s=>!s.graded).length;
+      });
+    });
+  });
+}
+
+document.getElementById('refreshSubmissions').addEventListener('click', refreshSubmissionsTable);
+
+/* Active submission context */
+let activeSubmission = null;
+let activeAssignment = null;
+
+function findSubmissionByKey(subs, key){
+  // key may be s.id or `${assignmentId}::${student}`
+  let s = subs.find(x=> (x.id && (x.id===key)) );
+  if(!s){
+    const [aid, student] = key.split('::');
+    s = subs.find(x=> x.assignmentId===aid && (normalizeEmail(x.student||x.studentEmail)===normalizeEmail(student)));
+  }
+  return s;
+}
+
+// ---- Group submission helpers ----
+function deriveGroupId(assignmentId, members){
+  const arr = (members||[]).map(normalizeEmail).filter(Boolean).sort();
+  return `g_${assignmentId}::${arr.join('|')}`;
+}
+function ensureSubmissionHasGroupId(sub){
+  if(sub && sub.groupMembers && sub.groupMembers.length){
+    const all = Array.from(new Set([...(sub.groupMembers||[]).map(normalizeEmail), normalizeEmail(sub.student||sub.studentEmail)]));
+    sub.groupMembers = all;
+    sub.groupId = sub.groupId || deriveGroupId(sub.assignmentId, all);
+  }
+}
+function ensureGroupReplication(subs, sub){
+  if(!sub || !sub.groupMembers || !sub.groupMembers.length) return {subs, changed:false};
+  ensureSubmissionHasGroupId(sub);
+  const groupId = sub.groupId;
+  let changed = false;
+  const members = sub.groupMembers.map(normalizeEmail);
+  members.forEach(m => {
+    const exists = subs.find(x => x.assignmentId===sub.assignmentId && normalizeEmail(x.student||x.studentEmail)===m);
+    if(!exists){
+      const clone = { ...sub };
+      delete clone.id; // composite key used
+      clone.student = m;
+      clone.studentEmail = m;
+      // keep same answers and metadata
+      subs.push(clone);
+      changed = true;
+    }
+  });
+  // Normalize groupId on all related records
+  subs.forEach(x=>{
+    if(x.assignmentId===sub.assignmentId){
+      if(x.groupMembers && x.groupMembers.length){ ensureSubmissionHasGroupId(x); }
+      if(x.groupId===groupId){ x.groupMembers = Array.from(new Set((x.groupMembers||[]).map(normalizeEmail))); }
+    }
+  });
+  return {subs, changed};
+}
+
+/* Render submission detail with per-question grading controls */
+function openSubmissionDetail(key){
+  readSubmissions(subs=>{
+    const s = findSubmissionByKey(subs, key);
+    if(!s) return alert('Submission not found');
+    // Replicate group submissions so each member has a record
+    const result = ensureGroupReplication(subs, s);
+    if(result.changed){
+      writeSubmissions(result.subs, ()=>{ refreshSubmissionsTable(); });
+    }
+    activeSubmission = s;
+    readAssignments(assigns=>{
+      const as = (assigns||[]).find(a=>a.id===s.assignmentId);
+      if(!as || as.createdBy !== currentEmail) { alert('Not your assignment'); return; }
+      activeAssignment = as;
+
+      document.getElementById('noSubmission').style.display='none';
+      document.getElementById('submissionPanel').style.display='block';
+      document.getElementById('subStudent').innerText = s.studentName || s.studentEmail || s.student || '';
+      const meta = `Submitted: ${s.submittedAt ? new Date(s.submittedAt).toLocaleString() : '-'} • ${ (s.groupMembers && s.groupMembers.length>0) ? 'Group submission' : 'Individual'}`;
+      document.getElementById('subMeta').innerText = meta;
+      document.getElementById('lockToggleBtn').innerText = s.locked ? 'Unlock' : 'Lock';
+      // build assignment view with per-question grading
+      const av = document.getElementById('assignmentView');
+      av.innerHTML = `<h3 style="margin-top:0">${escapeHtml(as.title)}</h3><div class="small-muted">${escapeHtml(as.description||'')}</div><hr/>`;
+
+      const questionsContainer = document.createElement('div');
+      questionsContainer.className = 'grid-questions';
+
+      const answers = s.answers || [];
+      let totalMax = as.totalPoints || 0;
+
+      const qMaxList = (as.questions||[]).map(q=> q.points || 0 );
+      const qSum = qMaxList.reduce((a,b)=>a+b,0);
+      let normalized = false;
+      let normalizeFactor = 1;
+      if(qSum && totalMax && qSum !== totalMax){
+        normalizeFactor = totalMax / qSum;
+        normalized = true;
+      }
+
+      as.questions.forEach((q, idx)=>{
+        const studAns = answers[idx] || {text:'', files:[], links:[]};
+        const qMaxRaw = q.points || 0;
+        const qMax = normalized ? Math.round((qMaxRaw * normalizeFactor) * 100)/100 : qMaxRaw;
+
+        const qGradeState = (s.qGrades && s.qGrades[idx]) ? s.qGrades[idx] : {score:null, feedback:'', revealed: !!(s.qGrades && s.qGrades[idx] && s.qGrades[idx].revealed) };
+
+        const qBlock = document.createElement('div');
+        qBlock.className = 'question';
+        qBlock.dataset.qidx = idx;
+        qBlock.innerHTML = `
+          <div style=\"display:flex;justify-content:space-between;align-items:center\">
+            <div><strong>Q${idx+1}.</strong> ${escapeHtml(q.text || '')}</div>
+            <div class=\"small-muted\">Max: ${qMax}</div>
+          </div>
+          <div class=\"hint\">Hint: ${escapeHtml(q.hint || 'No hint')}</div>
+          <div style=\"margin-top:8px\"><strong>Student answer:</strong>
+            <div style=\"margin-top:6px\">${ studAns.text ? `<div>${escapeHtml(studAns.text)}</div>` : '<div class=\"small-muted\">No text answer</div>' }</div>
+            ${ studAns.files && studAns.files.length ? '<div style=\"margin-top:6px\" class=\"small-muted\">Files: '+escapeHtml(studAns.files.join(', '))+'</div>':'' }
+            ${ studAns.links && studAns.links.length ? '<div style=\"margin-top:6px\" class=\"small-muted\">Links: '+escapeHtml(studAns.links.join(', '))+'</div>':'' }
+          </div>
+
+          <div style=\"margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center\">
+            <label class=\"small-muted\">Score:</label>
+            <input type=\"number\" class=\"qscore input\" min=\"0\" max=\"${qMax}\" style=\"width:110px\" value=\"${qGradeState.score !== null && qGradeState.score !== undefined ? qGradeState.score : ''}\">
+            <label class=\"small-muted\">Feedback:</label>
+            <input type=\"text\" class=\"qfeedback input\" style=\"flex:1\" value=\"${escapeHtml(qGradeState.feedback || '')}\">
+            <button class=\"action-btn qRevealBtn\">${qGradeState.revealed ? 'Explanation visible' : 'Reveal explanation'}</button>
+          </div>
+          <div class=\"explanation\" id=\"exp-${idx}\">${escapeHtml(q.explanation || '')}</div>
+        `;
+
+        const revealBtn = qBlock.querySelector('.qRevealBtn');
+        const expDiv = qBlock.querySelector('.explanation');
+        if(qGradeState.revealed){ expDiv.style.display = 'block'; } else { expDiv.style.display = 'none'; }
+        revealBtn.addEventListener('click', ()=>{
+          const scoreVal = qBlock.querySelector('.qscore').value;
+          const allow = (scoreVal !== '' && scoreVal !== null) || confirm('Reveal explanation even if ungraded?');
+          if(!allow) return;
+          expDiv.style.display = 'block';
+          revealBtn.innerText = 'Explanation visible';
+        });
+
+        questionsContainer.appendChild(qBlock);
+      });
+
+      av.appendChild(questionsContainer);
+
+      renderGradeSummaryForSubmission(s, as);
+      renderGroupManager(s, as);
+    });
+  });
+}
+
+// ===== Group Manager UI =====
+function renderGroupManager(sub, as){
+  const gm = document.getElementById('groupManager');
+  const chips = document.getElementById('groupChips');
+  const meta = document.getElementById('groupMeta');
+  const hint = document.getElementById('groupHint');
+  const validation = document.getElementById('groupValidation');
+  const emailInput = document.getElementById('groupEmailInput');
+  const addBtn = document.getElementById('addGroupBtn');
+  const saveBtn = document.getElementById('saveGroupBtn');
+
+  const isGroup = !!as.groupRequired;
+  gm.style.display = 'block';
+  hint.style.display = isGroup ? 'block' : 'none';
+  validation.innerText = '';
+
+  // Build working list
+  const primary = normalizeEmail(sub.student||sub.studentEmail||'');
+  let members = Array.from(new Set([primary, ...((sub.groupMembers||[]).map(normalizeEmail))])).filter(Boolean);
+
+  function redraw(){
+    chips.innerHTML = '';
+    members.forEach(m => {
+      const tag = document.createElement('div');
+      tag.className = 'badge';
+      tag.style.display='inline-flex'; tag.style.alignItems='center'; tag.style.gap='6px';
+      tag.innerHTML = `${m} <button class="action-btn" data-email="${m}">×</button>`;
+      const btn = tag.querySelector('button');
+      btn.style.padding='2px 6px'; btn.style.borderRadius='999px'; btn.style.fontSize='12px';
+      btn.addEventListener('click', ()=>{
+        if(m===primary){ validation.innerText = 'Cannot remove the primary submitter.'; return; }
+        members = members.filter(x=>x!==m);
+        redraw(); validate();
+      });
+      chips.appendChild(tag);
+    });
+    meta.innerText = `(${members.length} member${members.length===1?'':'s'})`;
+  }
+
+  function validate(){
+    validation.innerText = '';
+    if(isGroup && members.length < 2){
+      validation.innerText = 'Group assignments require at least 2 members.';
+      return false;
+    }
+    const invalid = members.find(m => !/^\S+@\S+\.\S+$/.test(m));
+    if(invalid){ validation.innerText = `Invalid email: ${invalid}`; return false; }
+    return true;
+  }
+
+  addBtn.onclick = () => {
+    const val = normalizeEmail(emailInput.value);
+    emailInput.value = '';
+    if(!val){ validation.innerText = 'Enter an email to add.'; return; }
+    if(!/^\S+@\S+\.\S+$/.test(val)){ validation.innerText = 'Enter a valid email address.'; return; }
+    if(members.includes(val)){ validation.innerText = 'Already in group.'; return; }
+    members.push(val);
+    redraw(); validate();
+  };
+
+  saveBtn.onclick = () => {
+    if(!validate()) return;
+    readSubmissions(subs => {
+      // Update base record for this submission
+      const key = sub.id || `${sub.assignmentId}::${sub.student||sub.studentEmail}`;
+      const s = findSubmissionByKey(subs, key);
+      if(!s) return;
+      s.groupMembers = members;
+      ensureSubmissionHasGroupId(s);
+      const result = ensureGroupReplication(subs, s);
+      // propagate groupId and members to all linked records
+      const final = (s.groupId) ? result.subs.map(rec => {
+        if(rec.assignmentId===s.assignmentId && rec.groupId===s.groupId){ return { ...rec, groupMembers: s.groupMembers, groupId: s.groupId }; }
+        return rec;
+      }) : result.subs;
+      writeSubmissions(final, ()=>{ addActivity('Updated group list'); refreshSubmissionsTable(); });
+    });
+  };
+
+  redraw();
+  validate();
+}
+
+/* Toggle lock for submission */
+document.getElementById('lockToggleBtn').addEventListener('click', ()=>{
+  if(!activeSubmission) return;
+  readSubmissions(subs=>{
+    const s = findSubmissionByKey(subs, activeSubmission.id || `${activeSubmission.assignmentId}::${activeSubmission.student||activeSubmission.studentEmail}`);
+    if(!s) return alert('Not found');
+    s.locked = !s.locked;
+    s.lockedBy = s.locked ? currentEmail : null;
+    writeSubmissions(subs, ()=>{ addActivity(`${s.locked ? 'Locked' : 'Unlocked'} grade for ${s.studentEmail||s.student}`); refreshSubmissionsTable(); openSubmissionDetail(s.id || `${s.assignmentId}::${s.student||s.studentEmail}`); });
+  });
+});
+
+/* Save grading */
+document.getElementById('saveGradeBtn').addEventListener('click', ()=>{
+  if(!activeSubmission || !activeAssignment) return alert('No submission selected');
+  readSubmissions(subs=>{
+    const key = activeSubmission.id || `${activeSubmission.assignmentId}::${activeSubmission.student||activeSubmission.studentEmail}`;
+    const sIndex = subs.findIndex(x=> (x.id && x.id===key) || (!x.id && `${x.assignmentId}::${x.student||x.studentEmail}`===key));
+    if(sIndex === -1) return alert('Submission not found');
+    const s = subs[sIndex];
+
+    // Enforce group list requirement for group assignments
+    if(activeAssignment.groupRequired){
+      const members = (s.groupMembers||[]).map(normalizeEmail).filter(Boolean);
+      const hasList = members.length >= 2; // require at least 2 members for a group
+      if(!hasList){
+        alert('This is a group assignment. The submission must include a group list (at least 2 members). Ask the student to resubmit with their group.');
+        return;
+      }
+    }
+
+    const qBlocks = document.querySelectorAll('#assignmentView .question');
+    s.qGrades = s.qGrades || [];
+    let sum = 0; let maxSum = 0;
+    const as = activeAssignment;
+    const qMaxList = (as.questions||[]).map(q=> q.points || 0 );
+    const qSum = qMaxList.reduce((a,b)=>a+b,0);
+    const normalized = (qSum && as.totalPoints && qSum !== as.totalPoints);
+    const factor = normalized ? (as.totalPoints / qSum) : 1;
+
+    qBlocks.forEach((qb, idx)=>{
+      const scoreInput = qb.querySelector('.qscore');
+      const feedbackInput = qb.querySelector('.qfeedback');
+      const qMax = (as.questions[idx] && (as.questions[idx].points || 0)) * factor;
+      const rawScore = scoreInput.value === '' ? null : Number(scoreInput.value);
+      const bounded = rawScore === null ? null : Math.max(0, Math.min(Number((Math.round(rawScore*100)/100).toFixed(2)), Number((Math.round(qMax*100)/100).toFixed(2))));
+      s.qGrades[idx] = s.qGrades[idx] || {};
+      s.qGrades[idx].score = bounded;
+      s.qGrades[idx].feedback = feedbackInput.value || '';
+      s.qGrades[idx].revealed = (qb.querySelector('.explanation').style.display === 'block') || !!s.qGrades[idx].revealed;
+      if(bounded !== null){ sum += bounded; }
+      maxSum += qMax;
+    });
+
+    const rawTotal = Math.round(sum * 100)/100;
+    let finalTotal = rawTotal;
+    const penaltyPercent = Number(document.getElementById('latePenaltyInput').value) || 0;
+    const isLate = s.submittedAt > as.unpublishTs;
+    if(isLate && penaltyPercent > 0){
+      const deduction = Math.round((penaltyPercent/100) * finalTotal * 100)/100;
+      finalTotal = Math.max(0, Math.round((finalTotal - deduction)*100)/100);
+    }
+
+    s.score = finalTotal;
+    s.maxScore = Math.round(maxSum*100)/100;
+    s.graded = true;
+    s.locked = true;
+    s.gradeDate = Date.now();
+    s.history = s.history || [];
+    s.history.push({ ts: Date.now(), grader: currentEmail, rawTotal, finalTotal, penaltyPercent: isLate? penaltyPercent : 0, perQuestion: s.qGrades.map((qg, i)=>({index:i, score:qg.score, feedback:qg.feedback, revealed: !!qg.revealed})) });
+
+    // Persist to all group members if applicable
+    subs[sIndex] = s;
+    const toWrite = (()=>{
+      const result = ensureGroupReplication(subs, s);
+      if(s.groupId){
+        result.subs = result.subs.map(rec=>{
+          if(rec.assignmentId===s.assignmentId && rec.groupId===s.groupId){
+            return { ...rec, qGrades: s.qGrades, score: s.score, maxScore: s.maxScore, graded: s.graded, locked: s.locked, gradeDate: s.gradeDate };
+          }
+          return rec;
+        });
+      }
+      return result.subs;
+    })();
+    writeSubmissions(toWrite, ()=>{
+      const asTitle = as.title;
+      if(s.groupMembers && s.groupMembers.length){ s.groupMembers.forEach(email=> pushNotificationToUser(email, `Your group submission "${asTitle}" was graded: ${s.score}/${s.maxScore}`)); }
+      else { pushNotificationToUser(s.studentEmail||s.student, `Your submission "${asTitle}" was graded: ${s.score}/${s.maxScore}`); }
+      addActivity(`Graded submission ${s.id||''} (${s.studentEmail||s.student}) for "${asTitle}" — ${s.score}/${s.maxScore}`);
+      refreshSubmissionsTable();
+      openSubmissionDetail(s.id || `${s.assignmentId}::${s.student||s.studentEmail}`);
+      renderGradeSummaryForSubmission(s, as);
+      alert('Grade saved and student notified.');
+    });
+  });
+});
+
+/* Regrade (unlock) */
+document.getElementById('regradeBtn').addEventListener('click', ()=>{
+  if(!activeSubmission) return;
+  readSubmissions(subs=>{
+    const key = activeSubmission.id || `${activeSubmission.assignmentId}::${activeSubmission.student||activeSubmission.studentEmail}`;
+    const s = findSubmissionByKey(subs, key);
+    if(!s) return;
+    s.graded = false;
+    s.locked = false;
+    // propagate unlock to group
+    const toWrite = (s.groupId) ? subs.map(rec=>{
+      if(rec.assignmentId===s.assignmentId && rec.groupId===s.groupId){ return { ...rec, graded:false, locked:false }; }
+      return rec;
+    }) : subs;
+    writeSubmissions(toWrite, ()=>{ addActivity('Unlocked submission for regrade'); refreshSubmissionsTable(); openSubmissionDetail(key); });
+  });
+});
+
+/* Reveal all explanations */
+document.getElementById('releaseAllExplanationsBtn').addEventListener('click', ()=>{
+  if(!activeSubmission) return;
+  if(!confirm('Reveal explanations for all questions now? This will make them visible to the student after saving.')) return;
+  document.querySelectorAll('#assignmentView .question').forEach((qb)=>{
+    qb.querySelector('.explanation').style.display = 'block';
+    qb.querySelector('.qRevealBtn').innerText = 'Explanation visible';
+  });
+  alert('Explanations visible in the UI. Press "Save Grade & Notify" to persist this state.');
+});
+
+/* Render grade summary and history */
+function renderGradeSummaryForSubmission(s, as){
+  const summary = document.getElementById('gradeSummary');
+  if(!s) { summary.innerHTML = ''; return; }
+  const isLate = s.submittedAt > as.unpublishTs;
+  summary.innerHTML = `<div class="small-muted">Total: <strong>${s.score !== undefined ? s.score : '-'}/${s.maxScore || as.totalPoints}</strong></div>
+    <div class="small-muted">${isLate ? 'Submission was LATE (late penalty applied if configured).' : 'On time'}</div>`;
+
+  const hist = document.getElementById('gradeHistory');
+  hist.innerHTML = '';
+  if(s.history && s.history.length){
+    hist.innerHTML = '<div class="small-muted">Grade history</div>';
+    const rows = s.history.slice().reverse().map(h=>{
+      return `<div class="recent-item">
+        ${new Date(h.ts).toLocaleString()} — Grader: ${escapeHtml(h.grader)} • Raw: ${h.rawTotal} • Final: ${h.finalTotal} ${h.penaltyPercent ? '• Penalty: '+h.penaltyPercent+'%':''}
+        <div style="margin-top:6px;font-size:13px">Q details: ${h.perQuestion.map(p=>`[Q${p.index+1}: ${p.score===null?'-':p.score}]`).join(' ')}</div>
+      </div>`;
+    }).join('');
+    hist.innerHTML += rows;
+  }
+}
+
+/* Feedback only */
+document.getElementById('sendFeedbackOnlyBtn').addEventListener('click', ()=>{
+  if(!activeSubmission) return;
+  const explanation = document.getElementById('explainInput').value || '';
+  readSubmissions(subs=>{
+    const key = activeSubmission.id || `${activeSubmission.assignmentId}::${activeSubmission.student||activeSubmission.studentEmail}`;
+    const s = findSubmissionByKey(subs, key);
+    if(!s) return;
+    const title = activeAssignment ? activeAssignment.title : (s.assignmentTitle||'assignment');
+    const toWrite = (s.groupId) ? subs.map(rec=>{
+      if(rec.assignmentId===s.assignmentId && rec.groupId===s.groupId){ return { ...rec, teacherFeedbackOnly: explanation }; }
+      return rec;
+    }) : subs.map(rec=> rec===s ? { ...rec, teacherFeedbackOnly: explanation } : rec);
+    writeSubmissions(toWrite, ()=>{
+      if(s.groupMembers && s.groupMembers.length){ s.groupMembers.forEach(email=> pushNotificationToUser(email, `Feedback from teacher on "${title}"`)); }
+      else { pushNotificationToUser(s.studentEmail||s.student, `Feedback from teacher on "${title}"`); }
+      addActivity(`Sent feedback to ${s.studentEmail||s.student}`);
+      refreshSubmissionsTable();
+    });
+  });
+});
+
+/* ---------------------------
+  Feedback copy editor
+----------------------------*/
+const modal = document.getElementById('modalBackdrop');
+function openFeedbackModalFor(key){
+  readSubmissions(subs=>{
+    const s = findSubmissionByKey(subs, key);
+    if(!s) return alert('Submission not found');
+    const editor = document.getElementById('feedbackEditor');
+    editor.innerHTML = '';
+    readAssignments(assigns=>{
+      const as = (assigns||[]).find(a=>a.id===s.assignmentId) || {title:(s.assignmentTitle||'Assignment')};
+      document.getElementById('feedbackFor').innerText = `Student: ${s.studentName || s.studentEmail || s.student} • Assignment: ${as.title}`;
+      (as.questions||[]).forEach((q, idx)=>{
+        const ans = (s.answers && s.answers[idx]) ? s.answers[idx].text : '';
+        const block = document.createElement('div');
+        block.style.marginBottom='10px';
+        block.innerHTML = `<div style="font-weight:600">Q${idx+1}: ${escapeHtml(q.text)}</div>
+          <div class="small-muted">Hint: ${escapeHtml(q.hint||'')}</div>
+          <label class="label">Teacher edited copy (visible to student)</label>
+          <textarea class="feedbackText input" rows="4">${escapeHtml(ans||'')}</textarea>`;
+        editor.appendChild(block);
+      });
+      modal.style.display='flex';
+    });
+    modal.dataset.subid = s.id || `${s.assignmentId}::${s.student||s.studentEmail}`;
+  });
+}
+document.getElementById('editFeedbackBtn').addEventListener('click', ()=>{ if(activeSubmission){ openFeedbackModalFor(activeSubmission.id || `${activeSubmission.assignmentId}::${activeSubmission.student||activeSubmission.studentEmail}`); }});
+document.getElementById('closeModal').addEventListener('click', ()=>{ modal.style.display='none'; });
+document.getElementById('saveFeedbackCopy').addEventListener('click', ()=>{
+  const key = modal.dataset.subid;
+  if(!key) return;
+  const texts = Array.from(document.querySelectorAll('.feedbackText')).map(t=>t.value);
+  readFeedbacks(fb=>{
+    if(!fb) fb=[];
+    const id = 'fb_'+Date.now();
+    const copy = { id, submissionKey: key, teacher: currentEmail, ts: Date.now(), texts };
+    fb.push(copy);
+    writeFeedbacks(fb, ()=>{
+      readSubmissions(subs=>{
+        const s = findSubmissionByKey(subs, key);
+        if(s){
+          const title = activeAssignment ? activeAssignment.title : (s.assignmentTitle||'assignment');
+          const toWrite = (s.groupId) ? subs.map(rec=>{
+            if(rec.assignmentId===s.assignmentId && rec.groupId===s.groupId){ return { ...rec, feedbackCopyId: id }; }
+            return rec;
+          }) : subs.map(rec=> rec===s ? { ...rec, feedbackCopyId: id } : rec);
+          writeSubmissions(toWrite, ()=>{
+            if(s.groupMembers && s.groupMembers.length){ s.groupMembers.forEach(email=> pushNotificationToUser(email, `Teacher sent feedback on "${title}"`)); }
+            else { pushNotificationToUser(s.studentEmail||s.student, `Teacher sent feedback on "${title}"`); }
+            addActivity(`Saved feedback copy for ${s.studentEmail||s.student}`);
+            modal.style.display='none';
+            refreshSubmissionsTable();
+          });
+        } else {
+          modal.style.display='none';
+        }
+      });
+    });
+  });
+});
+
+/* ---------------------------
+  Overview & analytics
+----------------------------*/
+function renderOverview(){
+  readAssignments(assigns=>{
+    const myAssigns = (assigns||[]).filter(a=>a.createdBy===currentEmail);
+    document.getElementById('statAssignments').innerText = myAssigns.length;
+    const ov = document.getElementById('overviewRecent');
+    const top = myAssigns.slice().sort((a,b)=> (b.publishTs||0)-(a.publishTs||0)).slice(0,5);
+    ov.innerHTML = top.length ? top.map(a=>`<div class="recent-item"><span class="badge">${new Date(a.publishTs).toLocaleDateString()}</span> ${escapeHtml(a.title)}</div>`).join('') : '<div class="empty">No assignments yet</div>';
+  });
+  readUsers(users=>{
+    const me = users.find(u=> (u.email||'').toLowerCase()===currentEmail);
+    const nots = me && me.notifications ? me.notifications.slice().reverse().slice(0,6) : [];
+    document.getElementById('overviewNotifs').innerHTML = nots.map(n=>`<div class="recent-item">${escapeHtml(n.message)}</div>`).join('') || '<div class="empty">No notifications</div>';
+
+    // Populate profile dropdown info
+    const nameEl = document.getElementById('profileName');
+    const initialEl = document.getElementById('profileInitial');
+    if(nameEl){ nameEl.textContent = me?.fullName || 'Teacher'; }
+    if(initialEl){ initialEl.textContent = (me?.fullName ? me.fullName[0] : '👤'); }
+  });
+}
+
+/* ---------------------------
+  Helpers & boot
+----------------------------*/
+function escapeHtml(s){
+  if(s === null || s === undefined) return '';
+  return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+}
+
+function loadInitialDataIfEmpty(cb){
+  // No demo data; rely on actual login/signup data only
+  if(cb) cb();
+}
+
+/* ---------------------------
+  Init sequence
+----------------------------*/
+(async function init(){
+  await openDB();
+  await migrateLocalStorageToIDBIfNeeded();
+  await requireTeacher(async ()=>{
+    loadInitialDataIfEmpty(()=>{
+      renderAssignmentsTable(); refreshSubmissionsTable(); renderRecentActivities(); renderOverview(); refreshNotifUI();
+      const newBtn = document.getElementById('btnNewAssignment'); if(newBtn){ newBtn.addEventListener('click', ()=> document.getElementById('createAssignmentBtn').click()); }
+      const openGr = document.getElementById('btnOpenGrading'); if(openGr){ openGr.addEventListener('click', ()=> { navLinks.forEach(x=> x.classList.remove('active')); document.querySelector('[data-view="grading"]').classList.add('active'); showView('grading'); }); }
+      // Do not auto-insert demo questions
+      showView('overview');
+    });
+    await showUpcomingMaintenanceIfAny();
+    setInterval(showUpcomingMaintenanceIfAny, 60000);
+  });
+})();
+</script>
+</body>
+</html>

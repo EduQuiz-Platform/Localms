@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SmartLMS - Admin Dashboard</title>
+<style>
+:root{
+  --bg:#f5f7fa;--card:#fff;--text:#2d3748;--muted:#718096;--border:#e2e8f0;
+  --gradA:#667eea;--gradB:#764ba2;--danger:#f56565;--ok:#10b981;--warn:#f59e0b;
+}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:var(--bg);margin:0;padding:0;display:grid;grid-template-columns:260px 1fr;min-height:100vh;color:var(--text)}
+/* Sidebar */
+.aside{background:linear-gradient(180deg,var(--gradA),var(--gradB));color:#fff;padding:16px;display:flex;flex-direction:column;gap:14px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px}
+.brand .logo{width:34px;height:34px;border-radius:8px;background:#fff1;border:2px solid #fff4;display:flex;align-items:center;justify-content:center}
+.nav{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.nav button{all:unset;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:8px;cursor:pointer}
+.nav button.active,.nav button:hover{background:#fff2}
+.nav .cap{font-size:14px}
+.nav .badge{margin-left:auto;background:#0004;color:#fff;padding:2px 8px;border-radius:999px;font-size:12px}
+.footer-cta{margin-top:auto}
+.footer-cta button{width:100%;padding:10px 12px;border-radius:8px;border:none;background:#ffffff22;color:#fff;font-weight:700;cursor:pointer}
+.footer-cta button:hover{background:#ffffff33}
+/* Header */
+header{background:linear-gradient(135deg,var(--gradA) 0%,var(--gradB) 100%);color:white;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.header-title{font-size:18px;font-weight:800}
+.actions{display:flex;gap:10px;align-items:center}
+#notifBell{cursor:pointer;position:relative;user-select:none;font-size:20px;transition:transform .2s}
+#notifBell:hover{transform:scale(1.1)}
+#unreadCount{background:#f56565;color:white;border-radius:50%;padding:2px 6px;font-size:11px;position:absolute;top:-5px;right:-10px;font-weight:bold}
+#notifList{display:none;position:absolute;top:56px;right:10px;width:380px;max-width:calc(100vw - 20px);background:#fff;border:1px solid var(--border);border-radius:8px;max-height:400px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:10;color:var(--text)}
+.notif-item{padding:10px 12px;border-bottom:1px solid #f0f0f0;color:var(--text)}
+.notif-item:hover{background:#f9fafb}
+/* Main */
+main{padding:20px;max-width:1400px;margin:0 auto}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-bottom:20px}
+.stat-card{background:#fff;padding:18px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.08);border-left:4px solid var(--gradA);transition:transform .2s,box-shadow .2s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.stat-card h4{margin:0 0 8px 0;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.stat-card .value{font-size:32px;font-weight:bold;color:var(--text)}
+section{background:#fff;padding:20px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+section h3{margin-top:0;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:10px}
+input,textarea,button,select{width:100%;margin:5px 0;padding:10px 12px;border-radius:6px;border:1px solid #cbd5e0;box-sizing:border-box;font-size:14px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gradA);box-shadow:0 0 0 3px rgba(102,126,234,.1)}
+button{background:linear-gradient(135deg,var(--gradA) 0%,var(--gradB) 100%);color:white;font-weight:600;cursor:pointer;border:none;transition:transform .1s,box-shadow .2s}
+button:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(102,126,234,.3)}
+button:active{transform:translateY(0)}
+button.secondary{background:#e2e8f0;color:var(--text)}
+button.secondary:hover{background:#cbd5e0}
+button.danger{background:var(--danger);color:white}
+button.danger:hover{box-shadow:0 4px 8px rgba(245,101,101,.3)}
+.request-block,.user-card{border:1px solid var(--border);padding:15px;margin:10px 0;border-radius:8px;background:#fafbfc;transition:box-shadow .2s}
+.request-block:hover,.user-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.small{font-size:13px;color:var(--muted)}
+.small-muted{font-size:12px;color:var(--muted)}
+.empty{border:1px dashed var(--border);background:#fff;padding:14px;border-radius:8px;color:var(--muted);text-align:center}
+/* Password reveal UI */
+.pwd-wrap{position:relative;display:inline-block;padding-right:18px}
+.pwd{letter-spacing:2px}
+.pwd-eye{position:absolute;right:0;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:12px;user-select:none}
+.pwd-eye:hover{color:var(--text)}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;background:#e2e8f0;color:var(--text);margin-left:6px;font-weight:600}
+.badge.pending{background:#fef3c7;color:#92400e}
+.badge.approved{background:#d1fae5;color:#065f46}
+.badge.denied{background:#fee2e2;color:#991b1b}
+.badge.expired{background:#e5e7eb;color:#6b7280}
+.badge.active{background:#d1fae5;color:#065f46}
+.badge.inactive{background:#fee2e2;color:#991b1b}
+label.inline{display:inline-flex;gap:6px;align-items:center;margin-right:12px}
+.toolbar{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select,.toolbar button{width:auto;flex:1;min-width:150px}
+.toolbar button{flex:0}
+.action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
+.action-grid button{margin:0}
+.tab-nav{display:flex;gap:5px;margin-bottom:15px;border-bottom:2px solid var(--border)}
+.tab-nav button{width:auto;background:transparent;color:var(--muted);border:none;border-bottom:3px solid transparent;margin:0 0 -2px 0;padding:10px 20px;font-weight:500}
+.tab-nav button.active{color:var(--gradA);border-bottom-color:var(--gradA)}
+.tab-nav button:hover{color:var(--gradA);background:#f9fafb}
+.hidden{display:none!important}
+.progress-bar{background:#e2e8f0;height:8px;border-radius:4px;overflow:hidden;margin:8px 0}
+.progress-fill{background:linear-gradient(90deg,var(--gradA),var(--gradB));height:100%;transition:width .3s}
+/* Responsive */
+@media (max-width: 900px){
+  body{grid-template-columns:1fr}
+  .aside{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .2s}
+  .aside.open{transform:translateX(0)}
+  header .menu{display:inline-flex}
+}
+header .menu{display:none;background:#ffffff22;border:0;color:#fff;border-radius:8px;padding:8px 10px;cursor:pointer}
+@media (max-width: 480px){
+  main{padding:14px}
+  .toolbar{gap:6px}
+  .tab-nav button{padding:8px 12px}
+}
+</style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="aside" id="sidebar">
+    <div class="brand"><div class="logo">⚙️</div> SmartLMS Admin</div>
+    <div class="nav">
+      <button class="active" data-view="dashboard"><span>📊</span><span class="cap">Dashboard</span></button>
+      <button data-view="resets"><span>🔁</span><span class="cap">Password Resets</span><span class="badge" id="badgePending">0</span></button>
+      <button data-view="users"><span>👥</span><span class="cap">Users</span></button>
+      <button data-view="analytics"><span>📈</span><span class="cap">Analytics</span></button>
+      <button data-view="sysadmin"><span>🛡️</span><span class="cap">System & Admin Control</span></button>
+    </div>
+    <div class="footer-cta">
+      <button id="logoutBtnAside">Logout</button>
+    </div>
+  </aside>
+
+  <div>
+    <header>
+      <div class="left">
+        <button class="menu" id="menuBtn">☰</button>
+        <span class="header-title">Admin Dashboard</span>
+      </div>
+      <div class="actions">
+        <button id="logoutBtn" type="button" title="Logout" class="secondary">Logout</button>
+        <div id="notifBell" aria-expanded="false">🔔 <span id="unreadCount"></span></div>
+      </div>
+      <div id="notifList" role="listbox" aria-label="Notifications"></div>
+    </header>
+
+    <main>
+      <div id="maintBanner" style="position:sticky;top:0;z-index:40;background:#fff4c2;border:1px solid #e6e9ee;border-radius:6px;padding:6px 10px;margin-bottom:10px;display:none;text-align:center;font-size:13px"></div>
+      <div class="stats-grid" id="statsCards">
+        <div class="stat-card">
+          <h4>Total Users</h4>
+          <div class="value" id="statTotalUsers">0</div>
+        </div>
+        <div class="stat-card">
+          <h4>Pending Resets</h4>
+          <div class="value" id="statPendingResets">0</div>
+        </div>
+        <div class="stat-card">
+          <h4>Locked Accounts</h4>
+          <div class="value" id="statLockedAccounts">0</div>
+        </div>
+        <div class="stat-card">
+          <h4>Flagged Accounts</h4>
+          <div class="value" id="statFlaggedAccounts">0</div>
+        </div>
+        <div class="stat-card">
+          <h4>Maintenance</h4>
+          <div class="value" id="statMaintenance">Idle</div>
+          <div class="small" id="statMaintenanceSub"></div>
+        </div>
+      </div>
+
+      <!-- Resets -->
+      <section data-view="resets" class="hidden">
+        <h3>Password Reset Requests</h3>
+        <div class="toolbar">
+          <select id="resetFilter">
+            <option value="all">All Statuses</option>
+            <option value="pending" selected>Pending</option>
+            <option value="approved">Approved</option>
+            <option value="denied">Denied</option>
+            <option value="expired">Expired</option>
+          </select>
+          <button class="secondary" id="btnExportResets">Export CSV</button>
+          <button class="secondary" id="btnBulkApprove">Bulk Approve All Pending</button>
+        </div>
+        <div id="resetRequestsContainer"></div>
+      </section>
+
+      <!-- Users -->
+      <section data-view="users" class="hidden">
+        <h3>User Accounts</h3>
+        <div class="toolbar">
+          <input type="text" id="userSearch" placeholder="Search by name or email...">
+          <select id="roleFilter">
+            <option value="all">All Roles</option>
+            <option value="student">Students</option>
+            <option value="teacher">Teachers</option>
+            <option value="admin">Admins</option>
+          </select>
+          <select id="statusFilter">
+            <option value="all">All Statuses</option>
+            <option value="locked">Locked</option>
+            <option value="flagged">Flagged</option>
+            <option value="active">Active</option>
+          </select>
+          <button class="secondary" id="btnExportUsers">Export Users CSV</button>
+          <button id="btnAddUser">Add User</button>
+        </div>
+        <div id="usersContainer"></div>
+      </section>
+
+      <!-- Analytics -->
+      <section data-view="analytics" class="hidden">
+        <h3>System Analytics</h3>
+        <div class="tab-nav">
+          <button class="active" data-tab="overview">Overview</button>
+          <button data-tab="security">Security</button>
+          <button data-tab="activity">Activity</button>
+        </div>
+        <div id="analyticsContainer"></div>
+      </section>
+
+      <!-- System & Admin Control -->
+      <section data-view="sysadmin" class="hidden">
+        <h3>System & Admin Control</h3>
+        <div class="card" style="margin-bottom:12px">
+          <div class="small-muted">Quick actions</div>
+          <div class="action-grid" style="margin-top:8px">
+            <button id="btnReloadStats" class="secondary">Reload Stats</button>
+            <button id="btnExportAll" class="secondary">Export All Data (JSON)</button>
+            <button id="btnClearSessions" class="danger">Clear All Sessions</button>
+          </div>
+        </div>
+        <h3 style="margin-top:0">Maintenance</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <div class="card">
+            <div class="small-muted">Immediate maintenance</div>
+            <div class="toolbar" style="margin-top:8px">
+              <label class="small">Duration (hours)<input type="number" id="mmDuration" class="input" value="1" min="1" style="max-width:120px"/></label>
+              <button id="btnEnableMaint">Enable Maintenance Now</button>
+              <button class="secondary" id="btnDisableMaint">Disable</button>
+              <button class="danger" id="btnForceLogout">Force Logout Non-admins</button>
+            </div>
+            <div class="small">Status: <span id="maintStatus">Loading...</span></div>
+          </div>
+          <div class="card">
+            <div class="small-muted">Schedule maintenance</div>
+            <div class="toolbar" style="margin-top:8px">
+              <label class="small">Start<input type="datetime-local" id="schStart" class="input"/></label>
+              <label class="small">Duration (hours)<input type="number" id="schDuration" class="input" value="1" min="1" style="max-width:120px"/></label>
+              <button id="btnAddSchedule">Add Schedule</button>
+            </div>
+            <div id="scheduleList" class="small" style="margin-top:6px"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+// ===== Storage (IndexedDB with fallback) =====
+const supportsIndexedDB = typeof indexedDB !== 'undefined';
+const DB_NAME = 'smartlms-auth';
+const DB_VERSION = 3; // v3 adds per-tab sessions, keep in sync with index.html
+let dbInstance = null;
+
+function normalizeEmail(email){ return (email||'').trim().toLowerCase(); }
+
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    if(!supportsIndexedDB){ resolve(null); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if(!db.objectStoreNames.contains('users')){
+        const users = db.createObjectStore('users',{keyPath:'email'});
+        users.createIndex('email','email',{unique:true});
+      }
+      if(!db.objectStoreNames.contains('meta')){
+        db.createObjectStore('meta',{keyPath:'key'});
+      }
+      if(!db.objectStoreNames.contains('sessions')){
+        db.createObjectStore('sessions',{keyPath:'id'});
+      }
+      if(!db.objectStoreNames.contains('assignments')){
+        db.createObjectStore('assignments',{keyPath:'id'});
+      }
+      if(!db.objectStoreNames.contains('submissions')){
+        db.createObjectStore('submissions',{keyPath:['assignmentId','student']});
+      }
+    };
+    req.onsuccess = () => { dbInstance = req.result; resolve(dbInstance); };
+    req.onerror = () => { console.error(req.error); resolve(null); };
+  });
+}
+
+async function idbGetAll(store){
+  const db = await openDB();
+  if(!db) return JSON.parse(localStorage.getItem(store))||[];
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(store,'readonly');
+    const st = tx.objectStore(store);
+    const r = st.getAll();
+    r.onsuccess = ()=> resolve(r.result||[]);
+    r.onerror = ()=> resolve([]);
+  });
+}
+async function idbPutAll(store, items){
+  const db = await openDB();
+  if(!db){ localStorage.setItem(store, JSON.stringify(items||[])); return; }
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(store,'readwrite');
+    const st = tx.objectStore(store);
+    st.clear();
+    (items||[]).forEach(it=>st.put(it));
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> resolve();
+  });
+}
+async function idbPut(store, item){
+  const db = await openDB();
+  if(!db){
+    const arr = JSON.parse(localStorage.getItem(store))||[];
+    const key = store==='users'? item.email : store==='assignments'? item.id : store==='submissions'? `${item.assignmentId}||${item.student}` : JSON.stringify(item);
+    const map = new Map(arr.map(v=>[store==='users'? v.email : store==='assignments'? v.id : store==='submissions'? `${v.assignmentId}||${v.student}` : JSON.stringify(v), v]));
+    map.set(key,item);
+    localStorage.setItem(store, JSON.stringify([...map.values()]));
+    return;
+  }
+  return new Promise((resolve)=>{
+    const tx = db.transaction(store,'readwrite');
+    tx.objectStore(store).put(item);
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> resolve();
+  });
+}
+
+async function migrateLocalStorageToIDBIfNeeded(){
+  if(!supportsIndexedDB) return;
+  try{
+    const existing = await idbGetAll('users');
+    if(existing && existing.length>0) return;
+    const lsUsers = JSON.parse(localStorage.getItem('users')||'[]');
+    const lsAssignments = JSON.parse(localStorage.getItem('assignments')||'[]');
+    const lsSubmissions = JSON.parse(localStorage.getItem('submissions')||'[]');
+    if(lsUsers.length) await idbPutAll('users', lsUsers);
+    if(lsAssignments.length) await idbPutAll('assignments', lsAssignments);
+    if(lsSubmissions.length) await idbPutAll('submissions', lsSubmissions);
+  }catch(e){ console.warn('migration failed', e); }
+}
+
+// Per-tab session helpers
+function getSessionId(){
+  let sid = sessionStorage.getItem('sessionId');
+  if(!sid){ sid = 's_'+Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('sessionId', sid); }
+  return sid;
+}
+async function getCurrentUser(){
+  const sid = getSessionId();
+  if(supportsIndexedDB){
+    try{
+      const db = await openDB();
+      if(db){
+        return await new Promise((resolve)=>{
+          const tx = db.transaction('sessions','readonly');
+          const st = tx.objectStore('sessions');
+          const r = st.get(sid);
+          r.onsuccess = ()=> resolve(r.result? r.result.user : null);
+          r.onerror = ()=> resolve(null);
+        });
+      }
+    }catch(_){ }
+  }
+  const raw = sessionStorage.getItem('currentUser');
+  return raw? JSON.parse(raw) : null;
+}
+async function setCurrentUser(user){
+  const sid = getSessionId();
+  if(supportsIndexedDB){
+    try{
+      const db = await openDB();
+      if(db){
+        await new Promise((resolve)=>{
+          const tx = db.transaction('sessions','readwrite');
+          tx.objectStore('sessions').put({id:sid, user});
+          tx.oncomplete = ()=> resolve();
+          tx.onerror = ()=> resolve();
+        });
+        return;
+      }
+    }catch(_){ }
+  }
+  sessionStorage.setItem('currentUser', JSON.stringify(user));
+}
+async function clearCurrentUser(){
+  const sid = getSessionId();
+  if(supportsIndexedDB){
+    try{
+      const db = await openDB();
+      if(db){
+        await new Promise((resolve)=>{
+          const tx = db.transaction('sessions','readwrite');
+          tx.objectStore('sessions').delete(sid);
+          tx.oncomplete = ()=> resolve();
+          tx.onerror = ()=> resolve();
+        });
+        return;
+      }
+    }catch(_){ }
+  }
+  sessionStorage.removeItem('currentUser');
+}
+
+// Convenience wrappers for users/assignments/submissions
+const Storage = {
+  async getUsers(){ return await idbGetAll('users'); },
+  async saveUsers(users){ await idbPutAll('users', users); },
+  async getAssignments(){ return await idbGetAll('assignments'); },
+  async saveAssignments(items){ await idbPutAll('assignments', items); },
+  async getSubmissions(){ return await idbGetAll('submissions'); },
+  async saveSubmissions(items){ await idbPutAll('submissions', items); }
+};
+
+function isLocked(u){ return !!(u.lockedUntil && Date.now() < u.lockedUntil); }
+
+// ===== Sidebar Nav =====
+const sidebar = document.getElementById('sidebar');
+const menuBtn = document.getElementById('menuBtn');
+menuBtn && menuBtn.addEventListener('click', ()=> sidebar.classList.toggle('open'));
+
+function switchView(view){
+  document.querySelectorAll('.nav button').forEach(b=>{
+    if(b.dataset.view===view) b.classList.add('active'); else b.classList.remove('active');
+  });
+  document.querySelectorAll('main > section').forEach(sec=>{
+    sec.classList.toggle('hidden', sec.dataset.view !== view);
+  });
+  // Accessibility: update aria-selected on nav buttons
+  document.querySelectorAll('.nav button').forEach(b=> b.setAttribute('aria-selected', b.dataset.view===view ? 'true' : 'false'));
+  if(view==='resets') renderResetRequests();
+  if(view==='users') renderUsers();
+  if(view==='analytics') renderAnalytics();
+  if(view==='sysadmin') initMaintenanceUI();
+}
+
+document.querySelectorAll('.nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchView(btn.dataset.view));
+});
+
+// ===== Notifications =====
+function pushNotification(user, message){
+  user.notifications = user.notifications || [];
+  user.notifications.push({ message, timestamp: Date.now(), read: false });
+}
+function renderNotifications(user){
+  const list = document.getElementById('notifList');
+  const count = (user.notifications||[]).filter(n=>!n.read).length;
+  document.getElementById('unreadCount').innerText = count? String(count):'';
+  list.innerHTML = '';
+  const items = (user.notifications||[]).slice().reverse();
+  if(!items.length){
+    const empty = document.createElement('div');
+    empty.className = 'notif-item';
+    empty.innerText = 'No notifications';
+    list.appendChild(empty);
+  } else {
+    // Header with clear button
+    const head = document.createElement('div');
+    head.className = 'notif-item';
+    head.style.display = 'flex';
+    head.style.justifyContent = 'space-between';
+    head.style.alignItems = 'center';
+    head.innerHTML = `<strong>Notifications</strong><button class="action-btn" id="notifClearBtn">Clear all</button>`;
+    list.appendChild(head);
+    items.forEach(n=>{
+      const div = document.createElement('div');
+      div.className = 'notif-item';
+      div.innerText = `${new Date(n.timestamp).toLocaleString()} - ${n.message}`;
+      list.appendChild(div);
+    });
+    // Bind clear all
+    const clearBtn = document.getElementById('notifClearBtn');
+    if(clearBtn){
+      clearBtn.onclick = async ()=>{
+        if(!window.__currentAdmin) return;
+        const admin = window.__currentAdmin;
+        admin.notifications = [];
+        const users = await Storage.getUsers();
+        const idx = users.findIndex(u=>u.email===admin.email);
+        if(idx>=0) users[idx] = admin;
+        await Storage.saveUsers(users);
+        // Keep session in sync so refresh won't restore old notifications
+        try { await setCurrentUser(admin); } catch(_) {}
+        document.getElementById('unreadCount').innerText = '';
+        renderNotifications(admin);
+      };
+    }
+  }
+}
+function toggleNotifList(){
+  const list = document.getElementById('notifList');
+  const bell = document.getElementById('notifBell');
+  const show = getComputedStyle(list).display === 'none';
+  if(show && window.__currentAdmin){ renderNotifications(window.__currentAdmin); }
+  list.style.display = show ? 'block':'none';
+  bell.setAttribute('aria-expanded', show? 'true':'false');
+  if(show && window.__currentAdmin){
+    const admin = window.__currentAdmin;
+    if((admin.notifications||[]).some(n=>!n.read)){
+      admin.notifications.forEach(n=> n.read=true);
+      Storage.getUsers().then(users=>{
+        const idx = users.findIndex(u=>u.email===admin.email);
+        if(idx>=0) users[idx] = admin;
+        Storage.saveUsers(users).then(()=> renderNotifications(admin));
+      });
+    }
+  }
+}
+// Open/close behavior with outside click and ESC
+const __notifBellEl = document.getElementById('notifBell');
+const __notifListEl = document.getElementById('notifList');
+function closeNotifList(){ __notifListEl.style.display='none'; __notifBellEl.setAttribute('aria-expanded','false'); }
+__notifBellEl.addEventListener('click', (e)=>{ e.stopPropagation(); toggleNotifList(); });
+__notifListEl.addEventListener('click', (e)=> e.stopPropagation());
+document.addEventListener('click', (e)=>{
+  if(!__notifBellEl.contains(e.target) && !__notifListEl.contains(e.target)) closeNotifList();
+});
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeNotifList(); });
+
+// ===== Stats =====
+async function updateStats(){
+  const users = await Storage.getUsers();
+  document.getElementById('statTotalUsers').innerText = users.length;
+  const pendingResets = users.filter(u => u.resetRequest && u.resetRequest.status==='pending').length;
+  document.getElementById('statPendingResets').innerText = pendingResets;
+  document.getElementById('badgePending').innerText = pendingResets || '';
+  const locked = users.filter(u => isLocked(u)).length;
+  document.getElementById('statLockedAccounts').innerText = locked;
+  const flagged = users.filter(u => u.flagged).length;
+  document.getElementById('statFlaggedAccounts').innerText = flagged;
+
+  // Maintenance card
+  const m = await getMaintenance();
+  const active = isActiveMaintenance(m);
+  const upcoming = getUpcomingMaintenance(m);
+  const stat = document.getElementById('statMaintenance');
+  const sub = document.getElementById('statMaintenanceSub');
+  if(active){
+    const until = m.manualUntil || (m.schedules||[]).find(s=> Date.now()>=s.startAt && Date.now()<=s.endAt)?.endAt;
+    stat.innerText = 'ACTIVE';
+    function tick(){
+      const remain = Math.max(0, (until||Date.now()) - Date.now());
+      const mins = Math.floor(remain/60000); const secs = Math.floor((remain%60000)/1000);
+      sub.innerText = `Ends in ${mins}m ${secs}s (${new Date(until||Date.now()).toLocaleString()})`;
+      if(remain>0) window.__maintTimer = setTimeout(tick, 1000);
+    }
+    if(window.__maintTimer) clearTimeout(window.__maintTimer);
+    tick();
+  } else if(upcoming){
+    stat.innerText = 'UPCOMING';
+    sub.innerText = `Starts ${new Date(upcoming.startAt).toLocaleString()} for ${upcoming.durationHrs||Math.round((upcoming.endAt-upcoming.startAt)/3600000)}h`;
+  } else {
+    stat.innerText = 'Idle';
+    sub.innerText = '';
+  }
+}
+
+// ===== Resets =====
+async function renderResetRequests(){
+  const filterVal = document.getElementById('resetFilter').value;
+  const users = await Storage.getUsers();
+  const container = document.getElementById('resetRequestsContainer');
+  container.innerHTML = '';
+  let list = users
+    .filter(u => u.resetRequest)
+    .map(u => ({ user:u, status:u.resetRequest.status, expired: u.resetRequest.expiresAt && Date.now() > u.resetRequest.expiresAt }))
+    .filter(item => ['pending','approved','denied','expired'].includes(item.status) || item.expired);
+
+  list.forEach(item=>{
+    if(item.user.resetRequest.status==='approved' && item.expired){
+      item.user.resetRequest.status = 'expired';
+      item.status = 'expired';
+    }
+  });
+
+  if(filterVal !== 'all') list = list.filter(item => item.status === filterVal);
+
+  if(!list.length){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.innerText = 'No password reset requests matching filter.';
+    container.appendChild(empty);
+    await Storage.saveUsers(users);
+    return;
+  }
+
+  list.forEach(item=>{
+    const u = item.user;
+    const statusNow = item.status;
+    const expiresInMs = (u.resetRequest.expiresAt || 0) - Date.now();
+    const expiresStr = u.resetRequest.expiresAt ? (expiresInMs>0 ? Math.ceil(expiresInMs/(3600*1000))+'h left' : 'expired') : 'n/a';
+    const div = document.createElement('div');
+    div.className = 'request-block';
+    div.innerHTML = `
+      <b>${u.fullName}</b> <span class="small">(${u.email}) - ${u.role || 'user'}</span>
+      <span class="badge ${statusNow}">${statusNow.toUpperCase()}</span>
+      ${u.resetRequest.tempPassword ? `<div class="small">Temp Password: <code>${u.resetRequest.tempPassword}</code></div>` : ''}
+      <div class="small">Requested: ${u.resetRequest.createdAt ? new Date(u.resetRequest.createdAt).toLocaleString() : 'n/a'}</div>
+      <div class="small">Expiry: ${u.resetRequest.expiresAt ? new Date(u.resetRequest.expiresAt).toLocaleString() : 'n/a'} (${expiresStr})</div>
+      ${u.resetRequest.denialReason ? `<div class="small">Denial Reason: ${u.resetRequest.denialReason}</div>` : ''}
+      <div class="action-grid">
+        ${statusNow==='pending' ? `<button type="button" data-act="approve" data-email="${u.email}">Approve</button>` : ''}
+        ${statusNow==='pending' ? `<button type="button" class="danger" data-act="deny" data-email="${u.email}">Deny</button>` : ''}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  container.onclick = async (ev)=>{
+    const t = ev.target.closest('button');
+    if(!t) return;
+    const email = t.getAttribute('data-email');
+    const action = t.getAttribute('data-act');
+    const users = await Storage.getUsers();
+    const u = users.find(x=>x.email===email);
+    if(!u || !u.resetRequest) return;
+
+    if(action==='approve'){
+      if(u.resetRequest.expiresAt && Date.now()>u.resetRequest.expiresAt){
+        u.resetRequest.status = 'expired';
+        pushNotification(u,'Password reset expired. Please submit a new request.');
+      } else {
+        u.resetRequest.status = 'approved';
+        u.mustChangePassword = true;
+        pushNotification(u,'Your password reset was approved. Use your temporary password to sign in.');
+        alert(`Approved. Temp password for ${email}: ${u.resetRequest.tempPassword}`);
+      }
+    }
+    if(action==='deny'){
+      const reason = prompt('Reason for denial (optional):') || null;
+      u.resetRequest.status = 'denied';
+      u.resetRequest.denialReason = reason;
+      u.mustChangePassword = false;
+      pushNotification(u, reason? `Password reset denied: ${reason}` : 'Password reset denied.');
+    }
+
+    await Storage.saveUsers(users);
+    renderResetRequests();
+    updateStats();
+  };
+}
+
+async function bulkApproveResets(){
+  if(!confirm('Approve all pending password reset requests?')) return;
+  const users = await Storage.getUsers();
+  let count = 0;
+  users.forEach(u=>{
+    if(u.resetRequest && u.resetRequest.status==='pending'){
+      const notExpired = !u.resetRequest.expiresAt || Date.now() <= u.resetRequest.expiresAt;
+      if(notExpired){
+        u.resetRequest.status = 'approved';
+        u.mustChangePassword = true;
+        pushNotification(u,'Your password reset was approved. Use your temporary password to sign in.');
+        count++;
+      }
+    }
+  });
+  await Storage.saveUsers(users);
+  alert(`Approved ${count} reset request(s).`);
+  renderResetRequests();
+  updateStats();
+}
+function exportResets(){
+  Storage.getUsers().then(users=>{
+    const list = users.filter(u=>u.resetRequest).map(u=>({
+      name:u.fullName,email:u.email,status:u.resetRequest.status,
+      requested: u.resetRequest.createdAt? new Date(u.resetRequest.createdAt).toISOString() : '',
+      expires: u.resetRequest.expiresAt? new Date(u.resetRequest.expiresAt).toISOString() : ''
+    }));
+    const csv = [
+      ['Name','Email','Status','Requested','Expires'],
+      ...list.map(r=>[r.name,r.email,r.status,r.requested,r.expires])
+    ].map(r=>r.join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `reset_requests_${Date.now()}.csv`; a.click();
+  });
+}
+
+document.getElementById('resetFilter').addEventListener('change', renderResetRequests);
+document.getElementById('btnExportResets').addEventListener('click', exportResets);
+document.getElementById('btnBulkApprove').addEventListener('click', bulkApproveResets);
+
+// ===== Users (CRUD) =====
+function userCardHTML(u){
+  const safeId = (u.email||'').replace(/[^a-z0-9_\-\.]/gi,'_');
+  const isLocked = isLockedUser(u);
+  return `
+    <b>${u.fullName || '(no name)'}</b>
+    <span class="small">(${u.role || 'unknown'}) - ${u.email || 'n/a'}</span>
+    ${u.active===false ? '<span class="badge inactive">INACTIVE</span>' : '<span class="badge active">ACTIVE</span>'}
+    ${u.flagged ? '<span class="badge denied">FLAGGED</span>' : ''}
+    ${isLocked ? '<span class="badge pending">LOCKED</span>' : ''}
+    <div class="small">Phone: ${u.phone || 'n/a'} | Password: <span class="pwd-wrap"><span class="pwd" data-masked="true" data-email="${u.email}" data-pass="${(
+      u && u.resetRequest && u.resetRequest.status==='approved' && (!u.resetRequest.expiresAt || Date.now() <= u.resetRequest.expiresAt)
+    ) ? ((u.resetRequest.tempPassword||'') + ' (temp)') : (u.password || '')}">••••••••</span><span class="pwd-eye" title="Show/Hide" data-act="togglePwd" data-email="${u.email}">👁️</span></span></div>
+    <div class="small">Failed Attempts: ${u.failedAttempts||0} | Lockouts: ${u.lockouts||0} | Joined: ${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'n/a'}</div>
+    ${isLocked ? `<div class="small">Locked Until: ${new Date(u.lockedUntil).toLocaleString()}</div>` : ''}
+    <div class="action-grid">
+      <button type="button" data-act="edit" data-email="${u.email}">Edit</button>
+      <button type="button" class="secondary" data-act="toggleActive" data-email="${u.email}">${u.active===false ? 'Activate' : 'Deactivate'}</button>
+      <button type="button" class="danger" data-act="delete" data-email="${u.email}">Delete</button>
+      <button type="button" class="secondary" data-act="lock30" data-email="${u.email}">Lock 30m</button>
+      <button type="button" class="secondary" data-act="lock1440" data-email="${u.email}">Lock 24h</button>
+      <button type="button" data-act="unlock" data-email="${u.email}">Unlock</button>
+      <button type="button" class="${u.flagged ? '' : 'danger'}" data-act="toggleFlag" data-email="${u.email}">${u.flagged ? 'Unflag' : 'Flag'}</button>
+    </div>
+  `;
+}
+function isLockedUser(u){ return !!(u.lockedUntil && Date.now() < u.lockedUntil); }
+
+async function renderUsers(){
+  const searchVal = (document.getElementById('userSearch').value||'').toLowerCase();
+  const roleVal = document.getElementById('roleFilter').value;
+  const statusVal = document.getElementById('statusFilter').value;
+  const container = document.getElementById('usersContainer');
+  const users = await Storage.getUsers();
+
+  let filtered = users;
+  if(searchVal){
+    filtered = filtered.filter(u => (u.fullName||'').toLowerCase().includes(searchVal) || (u.email||'').toLowerCase().includes(searchVal));
+  }
+  if(roleVal !== 'all') filtered = filtered.filter(u => u.role === roleVal);
+  if(statusVal === 'locked') filtered = filtered.filter(u => isLockedUser(u));
+  else if(statusVal === 'flagged') filtered = filtered.filter(u => u.flagged);
+  else if(statusVal === 'active') filtered = filtered.filter(u => (!u.lockedUntil || Date.now() >= u.lockedUntil) && !u.flagged);
+
+  container.innerHTML = '';
+  if(!filtered.length){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.innerText = 'No users found matching filters.';
+    container.appendChild(empty);
+    return;
+  }
+
+  // Render original cards layout with added phone and password line
+  filtered.forEach(u=>{
+    const card = document.createElement('div');
+    card.className = 'user-card';
+    card.innerHTML = userCardHTML(u);
+    container.appendChild(card);
+  });
+
+  container.onclick = async (ev)=>{
+    const btn = ev.target.closest('[data-act]');
+    if(!btn) return;
+    const email = btn.getAttribute('data-email');
+    const act = btn.getAttribute('data-act');
+    if(act==='togglePwd'){
+      const span = container.querySelector(`.pwd[data-email="${email}"]`);
+      if(!span) return;
+      const masked = span.getAttribute('data-masked') !== 'false';
+      if(masked){ span.textContent = span.getAttribute('data-pass') || ''; span.setAttribute('data-masked','false'); }
+      else { span.textContent = '••••••••'; span.setAttribute('data-masked','true'); }
+      return;
+    }
+    const users = await Storage.getUsers();
+    const u = users.find(x=>x.email===email);
+    if(!u) return;
+
+    if(act==='edit') return openUserModal(u);
+    if(act==='toggleActive'){
+      u.active = (u.active===false) ? true : false;
+      pushNotification(u, u.active===false ? 'Your account has been deactivated by an administrator.' : 'Your account has been reactivated by an administrator.');
+      await Storage.saveUsers(users); renderUsers(); updateStats(); return;
+    }
+    if(act==='delete'){
+      if(!confirm('Delete this user? This cannot be undone.')) return;
+      const remain = users.filter(x=>x.email!==email);
+      await Storage.saveUsers(remain); renderUsers(); updateStats(); return;
+    }
+    if(act==='toggleFlag'){
+      u.flagged = !u.flagged;
+      pushNotification(u, u.flagged ? 'Your account has been flagged by an administrator.' : 'The flag on your account has been removed.');
+      await Storage.saveUsers(users); renderUsers(); updateStats(); return;
+    }
+    if(act==='lock30'){
+      u.lockedUntil = Date.now() + 30*60000; u.failedAttempts=0; u.lockouts=(u.lockouts||0)+1;
+      pushNotification(u,'Your account was locked by an administrator for 30 minutes.');
+      await Storage.saveUsers(users);
+      await forceLogoutUser(u.email);
+      sendMaintenanceBroadcast && sendMaintenanceBroadcast('force_logout_user', { email: u.email });
+      renderUsers(); return;
+    }
+    if(act==='lock1440'){
+      u.lockedUntil = Date.now() + 1440*60000; u.failedAttempts=0; u.lockouts=(u.lockouts||0)+1;
+      pushNotification(u,'Your account was locked by an administrator for 24 hours.');
+      await Storage.saveUsers(users);
+      await forceLogoutUser(u.email);
+      sendMaintenanceBroadcast && sendMaintenanceBroadcast('force_logout_user', { email: u.email });
+      renderUsers(); return;
+    }
+    if(act==='unlock'){ u.lockedUntil=null; u.failedAttempts=0; pushNotification(u,'Your account lock was removed by an administrator.'); await Storage.saveUsers(users); renderUsers(); return; }
+  };
+}
+
+// Modal for Add/Edit User
+let modal;
+function ensureModal(){
+  if(modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'userModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:#0006;display:flex;align-items:center;justify-content:center;z-index:1000';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:10px;min-width:320px;max-width:520px;width:92%;padding:16px;">
+      <h3 id="modalTitle" style="margin-top:0">User</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <input id="mFullName" placeholder="Full Name">
+        <input id="mEmail" placeholder="Email">
+        <select id="mRole">
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="admin">Admin</option>
+        </select>
+        <input id="mPhone" placeholder="Phone (optional)">
+        <input id="mPassword" placeholder="Password (set/reset)">
+      </div>
+      <div class="action-grid" style="margin-top:10px;grid-template-columns:repeat(3,1fr)">
+        <button id="modalSave">Save</button>
+        <button class="secondary" id="modalCancel">Cancel</button>
+        <button class="danger hidden" id="modalDelete">Delete</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  return modal;
+}
+function openUserModal(user){
+  ensureModal();
+  modal.classList.remove('hidden');
+  modal.style.display='flex';
+  const isEdit = !!user;
+  document.getElementById('modalTitle').innerText = isEdit? 'Edit User' : 'Add User';
+  const fullName = document.getElementById('mFullName');
+  const email = document.getElementById('mEmail');
+  const role = document.getElementById('mRole');
+  const phone = document.getElementById('mPhone');
+  const pass = document.getElementById('mPassword');
+  const del = document.getElementById('modalDelete');
+
+  fullName.value = user? (user.fullName||'') : '';
+  email.value = user? (user.email||'') : '';
+  email.disabled = !!user; // email is key
+  role.value = user? (user.role||'student') : 'student';
+  phone.value = user? (user.phone||'') : '';
+  pass.value = '';
+  del.classList.toggle('hidden', !isEdit);
+
+  document.getElementById('modalSave').onclick = async ()=>{
+    const users = await Storage.getUsers();
+    const payload = {
+      fullName: fullName.value.trim(),
+      email: normalizeEmail(email.value),
+      role: role.value,
+      phone: phone.value.trim(),
+    };
+    if(!payload.fullName || !payload.email){ alert('Name and email are required'); return; }
+    if(isEdit){
+      const idx = users.findIndex(u=>u.email===user.email);
+      if(idx<0){ alert('User not found'); return; }
+      users[idx] = { ...users[idx], ...payload };
+      if(pass.value){ users[idx].password = pass.value; }
+      await Storage.saveUsers(users);
+      closeModal(); renderUsers(); updateStats();
+    } else {
+      if(users.some(u=>u.email===payload.email)){ alert('Email already exists'); return; }
+      const now = Date.now();
+      const newUser = { ...payload, password: pass.value || Math.random().toString(36).slice(-10), createdAt: now, failedAttempts:0, lockedUntil:null, lockouts:0, flagged:false, resetRequest:null, active:true, notifications:[] };
+      users.push(newUser);
+      await Storage.saveUsers(users);
+      alert('User created');
+      closeModal(); renderUsers(); updateStats();
+    }
+  };
+  del.onclick = async ()=>{
+    if(!confirm('Delete this user?')) return;
+    const users = await Storage.getUsers();
+    const remain = users.filter(u=>u.email!==user.email);
+    await Storage.saveUsers(remain);
+    closeModal(); renderUsers(); updateStats();
+  };
+}
+function closeModal(){ if(modal){ modal.style.display='none'; modal.classList.add('hidden'); } }
+
+document.getElementById('btnAddUser').addEventListener('click', ()=> openUserModal(null));
+
+document.getElementById('btnExportUsers').addEventListener('click', ()=>{
+  Storage.getUsers().then(users=>{
+    const csv = [
+      ['Name','Email','Role','Created','Failed Attempts','Lockouts','Flagged','Active'],
+      ...users.map(u=>[
+        u.fullName||'', u.email||'', u.role||'', u.createdAt? new Date(u.createdAt).toISOString() : '', u.failedAttempts||0, u.lockouts||0, u.flagged?'Yes':'No', (u.active===false)?'No':'Yes'
+      ])
+    ].map(r=>r.join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=`users_${Date.now()}.csv`; a.click();
+  });
+});
+
+// ===== Analytics =====
+let currentAnalyticsTab = 'overview';
+document.querySelectorAll('[data-tab]').forEach(btn=>{
+  btn.addEventListener('click', (e)=>{
+    document.querySelectorAll('.tab-nav button').forEach(b=>b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    currentAnalyticsTab = e.currentTarget.getAttribute('data-tab');
+    renderAnalytics();
+  });
+});
+
+async function renderAnalytics(){
+  const container = document.getElementById('analyticsContainer');
+  container.innerHTML = '';
+  const users = await Storage.getUsers();
+  const assignments = await Storage.getAssignments();
+  const submissions = await Storage.getSubmissions();
+  if(currentAnalyticsTab==='overview'){
+    const byRole = {student:0, teacher:0, admin:0};
+    users.forEach(u=> byRole[u.role] = (byRole[u.role]||0) + 1);
+    const totalAssignments = assignments.length;
+    const totalSubmissions = submissions.length;
+    const avgGrade = submissions.length>0 ? (submissions.reduce((s,a)=>s+(a.grade||0),0)/submissions.length).toFixed(1) : 0;
+    container.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><h4>Students</h4><div class="value">${byRole.student||0}</div></div>
+        <div class="stat-card"><h4>Teachers</h4><div class="value">${byRole.teacher||0}</div></div>
+        <div class="stat-card"><h4>Admins</h4><div class="value">${byRole.admin||0}</div></div>
+        <div class="stat-card"><h4>Assignments</h4><div class="value">${totalAssignments}</div></div>
+        <div class="stat-card"><h4>Submissions</h4><div class="value">${totalSubmissions}</div></div>
+        <div class="stat-card"><h4>Avg Grade</h4><div class="value">${avgGrade}</div></div>
+      </div>`;
+  } else if(currentAnalyticsTab==='security'){
+    const totalLockouts = users.reduce((sum,u)=>(sum+(u.lockouts||0)),0);
+    const currentlyLocked = users.filter(u=>isLockedUser(u)).length;
+    const totalFlagged = users.filter(u=>u.flagged).length;
+    const totalAttempts = users.reduce((sum,u)=>(sum+(u.failedAttempts||0)),0);
+    const resetsPending = users.filter(u=>u.resetRequest && u.resetRequest.status==='pending').length;
+    const resetsApproved = users.filter(u=>u.resetRequest && u.resetRequest.status==='approved').length;
+    container.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><h4>Total Lockouts</h4><div class="value">${totalLockouts}</div></div>
+        <div class="stat-card"><h4>Currently Locked</h4><div class="value">${currentlyLocked}</div></div>
+        <div class="stat-card"><h4>Flagged Accounts</h4><div class="value">${totalFlagged}</div></div>
+        <div class="stat-card"><h4>Failed Attempts</h4><div class="value">${totalAttempts}</div></div>
+        <div class="stat-card"><h4>Pending Resets</h4><div class="value">${resetsPending}</div></div>
+        <div class="stat-card"><h4>Approved Resets</h4><div class="value">${resetsApproved}</div></div>
+      </div>`;
+  } else if(currentAnalyticsTab==='activity'){
+    const recentUsers = users.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,5);
+    const recentAssignments = assignments.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,5);
+    let html = '<h4>Recent User Registrations</h4>';
+    recentUsers.forEach(u=>{ html += `<div class="small">${u.fullName} (${u.email}) - ${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'n/a'}</div>`; });
+    html += "<h4 style='margin-top:20px;'>Recent Assignments</h4>";
+    recentAssignments.forEach(a=>{ html += `<div class="small">${a.title||a.id} - Created ${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : 'n/a'}</div>`; });
+    container.innerHTML = html;
+  }
+}
+
+// ===== Session & Access Control =====
+async function requireAdmin(){
+  // Legacy migration: if old localStorage currentUser exists, move it into this session once
+  try{
+    const legacy = localStorage.getItem('currentUser');
+    if(legacy){
+      const parsed = JSON.parse(legacy);
+      await setCurrentUser(parsed);
+      localStorage.removeItem('currentUser');
+    }
+  }catch(_){ }
+  const user = await getCurrentUser();
+  if(!user || user.role!=='admin'){
+    alert('Access denied');
+    window.location.href = 'index.html';
+    return null;
+  }
+  window.__currentAdmin = user;
+  renderNotifications(user);
+  return user;
+}
+
+// ===== Logout =====
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await clearCurrentUser(); window.location.href='index.html'; });
+document.getElementById('logoutBtnAside').addEventListener('click', async ()=>{ await clearCurrentUser(); window.location.href='index.html'; });
+
+// ===== Init =====
+(async function init(){
+  await openDB();
+  await migrateLocalStorageToIDBIfNeeded();
+  const admin = await requireAdmin();
+  if(!admin) return;
+  await updateStats();
+  switchView('dashboard');
+  // Default: show dashboard stats cards already visible
+  document.getElementById('btnAddUser');
+  // Handlers already attached above
+  await initMaintenanceUI();
+  // Show maintenance banner (active/upcoming countdown)
+  await showMaintenanceBanner();
+  setInterval(showMaintenanceBanner, 1000);
+})();
+
+// ===== Maintenance Logic =====
+async function getMaintenance(){
+  const db = await openDB();
+  if(!db) {
+    try { return JSON.parse(localStorage.getItem('maintenance')||'{}') || {}; } catch(_) { return {}; }
+  }
+  return await new Promise((resolve)=>{
+    const tx = db.transaction('meta','readonly');
+    const st = tx.objectStore('meta');
+    const r = st.get('maintenance');
+    r.onsuccess = ()=> resolve(r.result? r.result.value : {});
+    r.onerror = ()=> resolve({});
+  });
+}
+async function setMaintenance(val){
+  const db = await openDB();
+  if(!db){ localStorage.setItem('maintenance', JSON.stringify(val||{})); return; }
+  await new Promise((resolve)=>{
+    const tx = db.transaction('meta','readwrite');
+    tx.objectStore('meta').put({key:'maintenance', value: val||{} });
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> resolve();
+  });
+}
+function isActiveMaintenance(m){
+  const now = Date.now();
+  if(m.enabled && m.manualUntil && now < m.manualUntil) return true;
+  const schedules = Array.isArray(m.schedules)? m.schedules:[];
+  return schedules.some(s => now>=s.startAt && now<=s.endAt);
+}
+function getUpcomingMaintenance(m){
+  const now = Date.now();
+  const schedules = (Array.isArray(m.schedules)? m.schedules:[]).filter(s => s.startAt>now).sort((a,b)=>a.startAt-b.startAt);
+  return schedules[0] || null;
+}
+async function forceLogoutNonAdmins(){
+  const db = await openDB(); if(!db) return;
+  const users = await Storage.getUsers();
+  const nonAdmins = new Set(users.filter(u=>u.role!=='admin').map(u=> (u.email||'').toLowerCase()));
+  await new Promise((resolve)=>{
+    const tx = db.transaction('sessions','readwrite');
+    const st = tx.objectStore('sessions');
+    const req = st.getAll();
+    req.onsuccess = ()=>{
+      const all = req.result||[];
+      all.forEach(sess => { const email = (sess.user?.email||'').toLowerCase(); if(nonAdmins.has(email)) st.delete(sess.id); });
+    };
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> resolve();
+  });
+}
+async function forceLogoutUser(email){
+  const db = await openDB();
+  const lower = (email||'').toLowerCase();
+  if(db){
+    await new Promise((resolve)=>{
+      const tx = db.transaction('sessions','readwrite');
+      const st = tx.objectStore('sessions');
+      const all = st.getAll();
+      all.onsuccess = ()=>{
+        (all.result||[]).forEach(sess => { if((sess.user?.email||'').toLowerCase()===lower) st.delete(sess.id); });
+      };
+      tx.oncomplete = ()=> resolve();
+      tx.onerror = ()=> resolve();
+    });
+  }
+}
+async function initMaintenanceUI(){
+  const statusEl = document.getElementById('maintStatus');
+  const mmDur = document.getElementById('mmDuration');
+  const btnEnable = document.getElementById('btnEnableMaint');
+  const btnDisable = document.getElementById('btnDisableMaint');
+  const btnForce = document.getElementById('btnForceLogout');
+  const schStart = document.getElementById('schStart');
+  const schDur = document.getElementById('schDuration');
+  const btnAddSch = document.getElementById('btnAddSchedule');
+  const schList = document.getElementById('scheduleList');
+
+  async function refresh(){
+    const m = await getMaintenance();
+    const active = isActiveMaintenance(m);
+    const upcoming = getUpcomingMaintenance(m);
+    statusEl.innerText = active ? `ACTIVE until ${m.manualUntil? new Date(m.manualUntil).toLocaleString() : ''}` : (upcoming? `Upcoming: ${new Date(upcoming.startAt).toLocaleString()} - ${new Date(upcoming.endAt).toLocaleString()}` : 'Idle');
+    const schedules = (m.schedules||[]).slice().sort((a,b)=>a.startAt-b.startAt);
+    schList.innerHTML = schedules.length? schedules.map(s=>{
+      const state = (Date.now()<s.startAt)? 'UPCOMING' : (Date.now()<=s.endAt? 'ACTIVE':'EXPIRED');
+      return `<div class="request-block"><div><b>${new Date(s.startAt).toLocaleString()}</b> ➜ ${new Date(s.endAt).toLocaleString()} <span class="badge ${state==='ACTIVE'?'approved':(state==='UPCOMING'?'pending':'expired')}">${state}</span></div>
+      <div class="action-grid"><button data-act="notify" data-id="${s.id}" class="secondary">Notify Users</button><button data-act="remove" data-id="${s.id}" class="danger">Remove</button></div></div>`;
+    }).join('') : '<div class="small">No schedules</div>';
+
+    schList.onclick = async (e)=>{
+      const b = e.target.closest('button'); if(!b) return;
+      const act = b.getAttribute('data-act'); const id = b.getAttribute('data-id');
+      const m = await getMaintenance(); m.schedules = m.schedules||[];
+      const sched = m.schedules.find(x=>x.id===id);
+      if(act==='remove'){
+        m.schedules = m.schedules.filter(x=>x.id!==id); await setMaintenance(m); await refresh();
+      }
+      if(act==='notify' && sched){ await notifyAllUsers(`Scheduled maintenance: ${new Date(sched.startAt).toLocaleString()} - ${new Date(sched.endAt).toLocaleString()}`); alert('Notifications sent'); }
+    };
+  }
+
+  btnEnable.onclick = async ()=>{
+    const hrs = Math.max(1, Number(mmDur.value)||1);
+    const now = Date.now();
+    const until = now + hrs*3600*1000;
+    const m = await getMaintenance();
+    m.enabled = true; m.manualUntil = until; m.schedules = m.schedules||[];
+    await setMaintenance(m);
+    await forceLogoutNonAdmins();
+    // Broadcast for tabs without IndexedDB session control
+    sendMaintenanceBroadcast('maintenance_active', { until });
+    // Ensure non-IDB tabs self-logout instantly
+    sendMaintenanceBroadcast('force_logout', {});
+    await refresh();
+    alert('Maintenance enabled');
+  };
+  btnDisable.onclick = async ()=>{
+    const m = await getMaintenance(); m.enabled=false; m.manualUntil=null; await setMaintenance(m); sendMaintenanceBroadcast('maintenance_disabled', {}); await refresh(); alert('Maintenance disabled'); };
+  btnForce.onclick = async ()=>{ await forceLogoutNonAdmins(); sendMaintenanceBroadcast('force_logout', {}); alert('Force logout executed'); };
+  btnAddSch.onclick = async ()=>{
+    const startVal = schStart.value; const durHrs = Math.max(1, Number(schDur.value)||1);
+    if(!startVal){ alert('Select start date/time'); return; }
+    const startAt = new Date(startVal).getTime(); const endAt = startAt + durHrs*3600*1000;
+    if(isNaN(startAt)) { alert('Invalid start date'); return; }
+    const m = await getMaintenance(); m.schedules = m.schedules||[];
+    m.schedules.push({ id: 'sch_'+Date.now(), startAt, endAt, createdAt: Date.now(), durationHrs: durHrs });
+    await setMaintenance(m); await refresh(); alert('Schedule added');
+  };
+
+  await refresh();
+  // Prevent duplicate handler bindings across repeated init calls
+  btnEnable.onclick = btnEnable.onclick; btnDisable.onclick = btnDisable.onclick; btnForce.onclick = btnForce.onclick; btnAddSch.onclick = btnAddSch.onclick; schList.onclick = schList.onclick;
+}
+
+async function notifyAllUsers(message){
+  const users = await Storage.getUsers();
+  users.forEach(u=>{
+    if(u.role!=='admin'){
+      u.notifications = u.notifications||[];
+      u.notifications.push({ message, timestamp: Date.now(), read:false });
+    }
+  });
+  await Storage.saveUsers(users);
+}
+
+// ===== Maintenance Broadcast (for tabs without IndexedDB) =====
+let __maintBC;
+try { __maintBC = new BroadcastChannel('smartlms_maint'); } catch(_) { __maintBC = null; }
+function sendMaintenanceBroadcast(type, payload){
+  const msg = { type, payload, ts: Date.now() };
+  try { __maintBC && __maintBC.postMessage(msg); } catch(_) {}
+  try {
+    // storage-event fallback
+    localStorage.setItem('smartlms_maint_broadcast', JSON.stringify(msg));
+    // ensure subsequent events fire reliably
+    setTimeout(()=>{ try { localStorage.removeItem('smartlms_maint_broadcast'); } catch(_){} }, 0);
+  } catch(_){ }
+}
+
+// Quick actions
+document.getElementById('btnReloadStats')?.addEventListener('click', updateStats);
+document.getElementById('btnExportAll')?.addEventListener('click', async ()=>{
+  const [users, assignments, submissions] = await Promise.all([
+    Storage.getUsers(), Storage.getAssignments(), Storage.getSubmissions()
+  ]);
+  const blob = new Blob([JSON.stringify({ users, assignments, submissions }, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`smartlms_export_${Date.now()}.json`; a.click();
+});
+document.getElementById('btnClearSessions')?.addEventListener('click', async ()=>{
+  if(!confirm('Clear all active sessions? Non-admins will be logged out.')) return;
+  const db = await openDB(); if(!db) return;
+  await new Promise((resolve)=>{ const tx=db.transaction('sessions','readwrite'); tx.objectStore('sessions').clear(); tx.oncomplete=()=>resolve(); tx.onerror=()=>resolve(); });
+  alert('All sessions cleared');
+});
+
+async function showMaintenanceBanner(){
+  const m = await getMaintenance();
+  const banner = document.getElementById('maintBanner');
+  if(!banner) return;
+  if(isActiveMaintenance(m)){
+    const until = m.manualUntil || (m.schedules||[]).find(s=> Date.now()>=s.startAt && Date.now()<=s.endAt)?.endAt;
+    const remain = Math.max(0, (until||Date.now()) - Date.now());
+    const h = Math.floor(remain/3600000);
+    const mm = Math.floor((remain%3600000)/60000);
+    const ss = Math.floor((remain%60000)/1000);
+    banner.style.display = 'block';
+    banner.textContent = `System maintenance ACTIVE — restores in ${h}h ${mm}m ${ss}s (until ${new Date(until||Date.now()).toLocaleString()})`;
+    if(!window.__maintPrevActive){
+      // Transition to active: force logout non-admins and broadcast
+      await forceLogoutNonAdmins();
+      sendMaintenanceBroadcast('maintenance_active', { until });
+      // Ensure immediate logout for tabs without IDB by explicit signal
+      sendMaintenanceBroadcast('force_logout', {});
+    }
+    window.__maintPrevActive = true;
+  } else {
+    const up = getUpcomingMaintenance(m);
+    if(up){
+      const remain = Math.max(0, up.startAt - Date.now());
+      const h = Math.floor(remain/3600000);
+      const mm = Math.floor((remain%3600000)/60000);
+      const ss = Math.floor((remain%60000)/1000);
+      banner.style.display = 'block';
+      banner.textContent = `Upcoming maintenance — starts in ${h}h ${mm}m ${ss}s (at ${new Date(up.startAt).toLocaleString()})`;
+    } else {
+      banner.style.display = 'none';
+    }
+    if(window.__maintPrevActive){
+      // Transition to inactive
+      sendMaintenanceBroadcast('maintenance_disabled', {});
+    }
+    window.__maintPrevActive = false;
+  }
+}
+</script>
+</body>
+</html>

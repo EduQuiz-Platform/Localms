@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SmartLMS — Student</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{--purple:#5b2ea6;--muted:#f3f3f6;--card:#fff;--text:#222}
+  body{font-family:Inter,Arial,Helvetica,sans-serif;margin:0;background:#f4f6f8;color:var(--text)}
+  header{background:#fff;border-bottom:1px solid #e6e9ee;min-height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 12px}
+  .container{max-width:980px;margin:0 auto;padding:12px}
+  .card{background:#fff;border:1px solid #eaeff5;border-radius:8px;box-shadow:0 1px 0 rgba(0,0,0,0.02);padding:14px}
+  .small{font-size:13px;color:#666}
+  .badge{display:inline-block;background:#eef2ff;color:var(--purple);padding:2px 8px;border-radius:999px;font-size:12px}
+  .question{border:1px solid #e6e9ee;border-radius:8px;padding:10px;margin:10px 0;background:#fafafa}
+  .q-attach-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .q-attach-card{border:1px solid #eee;border-radius:6px;padding:8px;display:flex;gap:8px;align-items:center;background:#fff}
+  .grid{display:grid;gap:12px}
+  @media(max-width: 760px){ .container{padding:10px} }
+  .empty{border:1px dashed #e6e9ee;background:#fff;padding:14px;border-radius:8px;color:#666;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div><strong>SmartLMS — Student</strong></div>
+  <div>
+    <button id="logoutBtn" style="border:1px solid #e6e9ee;border-radius:6px;background:#f8f8fb;padding:6px 10px">Logout</button>
+  </div>
+</header>
+<div class="container">
+  <div id="maintBanner" style="display:none;background:#fff4c2;border:1px solid #e6e9ee;border-radius:6px;padding:6px 10px;margin-bottom:8px;text-align:center;font-size:13px"></div>
+  <div id="assignments"></div>
+</div>
+<script>
+// IndexedDB v3 + per-tab session
+const supportsIndexedDB = typeof indexedDB !== 'undefined';
+const DB_NAME = 'smartlms-auth';
+const DB_VERSION = 3;
+let dbInstance = null;
+function openDB(){
+  return new Promise((resolve)=>{
+    if(!supportsIndexedDB){ resolve(null); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains('users')) db.createObjectStore('users',{keyPath:'email'});
+      if(!db.objectStoreNames.contains('meta')) db.createObjectStore('meta',{keyPath:'key'});
+      if(!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions',{keyPath:'id'});
+      if(!db.objectStoreNames.contains('assignments')) db.createObjectStore('assignments',{keyPath:'id'});
+      if(!db.objectStoreNames.contains('submissions')) db.createObjectStore('submissions',{keyPath:['assignmentId','student']});
+      if(!db.objectStoreNames.contains('feedbackCopies')) db.createObjectStore('feedbackCopies',{keyPath:'id'});
+    };
+    req.onsuccess = ()=>{ dbInstance = req.result; resolve(dbInstance); };
+    req.onerror = ()=>{ console.error(req.error); resolve(null); };
+  });
+}
+async function idbGetAll(store){ const db = await openDB(); if(!db) return JSON.parse(localStorage.getItem(store)||'[]'); return new Promise((resolve)=>{ const tx=db.transaction(store,'readonly'); const r=tx.objectStore(store).getAll(); r.onsuccess=()=>resolve(r.result||[]); r.onerror=()=>resolve([]); }); }
+async function idbPutAll(store,items){ const db = await openDB(); if(!db){ localStorage.setItem(store, JSON.stringify(items||[])); return; } return new Promise((resolve)=>{ const tx=db.transaction(store,'readwrite'); const st=tx.objectStore(store); st.clear(); (items||[]).forEach(it=>st.put(it)); tx.oncomplete=()=>resolve(); tx.onerror=()=>resolve(); }); }
+function getSessionId(){ let sid=sessionStorage.getItem('sessionId'); if(!sid){ sid='s_'+Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('sessionId',sid);} return sid; }
+async function getCurrentUser(){ const sid=getSessionId(); if(supportsIndexedDB){ try{ const db=await openDB(); if(db){ return await new Promise((resolve)=>{ const tx=db.transaction('sessions','readonly'); const r=tx.objectStore('sessions').get(sid); r.onsuccess=()=>resolve(r.result? r.result.user:null); r.onerror=()=>resolve(null); }); } }catch(_){ } } const raw=sessionStorage.getItem('currentUser'); return raw? JSON.parse(raw) : null; }
+async function clearCurrentUser(){ const sid=getSessionId(); if(supportsIndexedDB){ try{ const db=await openDB(); if(db){ await new Promise((resolve)=>{ const tx=db.transaction('sessions','readwrite'); tx.objectStore('sessions').delete(sid); tx.oncomplete=()=>resolve(); tx.onerror=()=>resolve(); }); } }catch(_){ } } sessionStorage.removeItem('currentUser'); }
+
+// Maintenance helpers (read-only)
+async function getMaintenance(){ const db = await openDB(); if(!db){ try { return JSON.parse(localStorage.getItem('maintenance')||'{}')||{}; } catch(_) { return {}; } } return new Promise((resolve)=>{ const tx=db.transaction('meta','readonly'); const st=tx.objectStore('meta'); const r=st.get('maintenance'); r.onsuccess=()=>resolve(r.result? r.result.value:{}); r.onerror=()=>resolve({}); }); }
+function isActiveMaintenance(m){ const now=Date.now(); if(m.enabled && m.manualUntil && now<m.manualUntil) return true; const s=Array.isArray(m.schedules)?m.schedules:[]; return s.some(x=> now>=x.startAt && now<=x.endAt); }
+function getUpcomingMaintenance(m){ const now=Date.now(); const s=(Array.isArray(m.schedules)?m.schedules:[]).filter(x=>x.startAt>now).sort((a,b)=>a.startAt-b.startAt); return s[0]||null; }
+async function updateMaintBanner(){ const m = await getMaintenance(); const b=document.getElementById('maintBanner'); if(!b) return; if(isActiveMaintenance(m)){ const until=m.manualUntil || (m.schedules||[]).find(s=> Date.now()>=s.startAt && Date.now()<=s.endAt)?.endAt; const remain=Math.max(0,(until||Date.now())-Date.now()); const h=Math.floor(remain/3600000), mm=Math.floor((remain%3600000)/60000), ss=Math.floor((remain%60000)/1000); b.style.display='block'; b.textContent=`System maintenance ACTIVE — restores in ${h}h ${mm}m ${ss}s (until ${new Date(until||Date.now()).toLocaleString()})`; try { const me=await getCurrentUser(); if(me && me.role!=='admin'){ await clearCurrentUser(); window.location.href='index.html'; return; } } catch(_){} } else { const up=getUpcomingMaintenance(m); if(up){ const remain=Math.max(0, up.startAt - Date.now()); const h=Math.floor(remain/3600000), mm=Math.floor((remain%3600000)/60000), ss=Math.floor((remain%60000)/1000); b.style.display='block'; b.textContent=`Upcoming system maintenance — starts in ${h}h ${mm}m ${ss}s (at ${new Date(up.startAt).toLocaleString()})`; } else { b.style.display='none'; } } }
+
+// Helpers
+function normalizeEmail(e){ return (e||'').trim().toLowerCase(); }
+
+// Render
+async function renderAssignments(){
+  const user = await getCurrentUser();
+  if(!user || user.role!=='student'){ alert('Please login as a student'); window.location.href='index.html'; return; }
+  const m = await getMaintenance();
+  if(isActiveMaintenance(m)){
+    alert(`System is currently undergoing maintenance. Try again after ${new Date((m.manualUntil)||Date.now()).toLocaleString()}. Thank you.`);
+    await clearCurrentUser(); window.location.href='index.html'; return;
+  } else {
+    const up = getUpcomingMaintenance(m); if(up){ alert(`Upcoming system maintenance: ${new Date(up.startAt).toLocaleString()}`); }
+  }
+  const assigns = await idbGetAll('assignments');
+  const now = Date.now();
+  const mine = assigns.filter(a=> now>=a.publishTs && now<=a.unpublishTs);
+  const container = document.getElementById('assignments');
+  container.innerHTML = '';
+  if(!mine.length){ container.innerHTML = '<div class="empty">No active assignments.</div>'; return; }
+  mine.forEach(a=>{
+    const card = document.createElement('div'); card.className='card';
+    card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <div><div class="small">Assignment</div><div style="font-weight:700">${escapeHtml(a.title)}</div></div>
+      <div class="small"><span class="badge">Due</span> ${new Date(a.unpublishTs).toLocaleString()}</div>
+    </div>
+    <div class="small" style="margin-top:6px">${escapeHtml(a.description||'')}</div>
+    <hr/>
+    <div id="qwrap-${a.id}"></div>`;
+    container.appendChild(card);
+
+    const qwrap = card.querySelector(`#qwrap-${a.id}`);
+    (a.questions||[]).forEach((q, idx)=>{
+      const qDiv = document.createElement('div'); qDiv.className='question';
+      qDiv.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>Q${idx+1}.</strong> ${escapeHtml(q.text||'')}</div>
+        <div class="small">${q.points||0} pts</div>
+      </div>
+      ${ q.type==='essay' ? `<textarea class="input" rows="6" placeholder="Your answer (unlimited)"></textarea>` : ''}
+      ${ q.type==='file' ? `<div class="small">Upload your files below:</div><input type="file" ${q?.meta?.allowMultiple ? 'multiple':''} class="input">` : ''}
+      ${ q.type==='link' ? (q?.meta?.resourceUrl ? `<div class="small">Resource: <a href="${escapeAttr(q.meta.resourceUrl)}" target="_blank" rel="noopener">Open link</a></div>` : '') : ''}
+      <div class="q-attach-list"></div>`;
+
+      // Show teacher attachments inline
+      const attList = qDiv.querySelector('.q-attach-list');
+      const attachments = (q.meta && Array.isArray(q.meta.attachments)) ? q.meta.attachments : [];
+      if(attachments.length){
+        attachments.forEach(att=>{
+          const item = document.createElement('div'); item.className='q-attach-card';
+          item.innerHTML = `${att.type && att.type.startsWith('image/') ? `<img src="${escapeAttr(att.dataUrl)}" alt="${escapeAttr(att.name)}" style="width:72px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #eee">` : '<div style="width:72px;height:48px;border:1px solid #eee;border-radius:4px;display:flex;align-items:center;justify-content:center">📄</div>'}
+            <div style="min-width:160px;word-break:break-all">
+              <div class="small">${escapeHtml(att.name)}</div>
+              <a class="small" href="${escapeAttr(att.dataUrl)}" download="${escapeAttr(att.name)}" target="_blank" rel="noopener">Preview/Download</a>
+            </div>`;
+          attList.appendChild(item);
+        });
+      }
+      qwrap.appendChild(qDiv);
+    });
+  });
+}
+
+function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+function escapeAttr(s){ if(s===null||s===undefined) return ''; return String(s).replaceAll('"','&quot;'); }
+
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await clearCurrentUser(); window.location.href='index.html'; });
+
+(async function init(){ await openDB(); renderAssignments(); })();
+setInterval(updateMaintBanner, 1000);
+updateMaintBanner();
+
+// Listen for maintenance broadcasts
+try { const bc = new BroadcastChannel('smartlms_maint'); bc.onmessage = async (ev)=>{ const msg=ev.data||{}; if(msg.type==='maintenance_active' || msg.type==='force_logout'){ const me=await getCurrentUser(); if(me && me.role!=='admin'){ await clearCurrentUser(); window.location.href='index.html'; return; } } await updateMaintBanner(); }; } catch(_) {}
+window.addEventListener('storage', async (e)=>{ if(e.key==='smartlms_maint_broadcast'){ try{ const msg=JSON.parse(e.newValue||'{}'); if(msg && (msg.type==='maintenance_active' || msg.type==='force_logout')){ const me=await getCurrentUser(); if(me && me.role!=='admin'){ await clearCurrentUser(); window.location.href='index.html'; return; } } if(msg && msg.type==='force_logout_user'){ const email=(msg.payload&&msg.payload.email||'').toLowerCase(); const me=await getCurrentUser(); if(me && (me.email||'').toLowerCase()===email){ await clearCurrentUser(); window.location.href='index.html'; return; } } }catch(_){ } await updateMaintBanner(); } });
+
+// Listen for admin forced logout of a single user
+try { const bc2 = new BroadcastChannel('smartlms_maint'); bc2.onmessage = async (ev)=>{ const msg=ev.data||{}; if(msg.type==='force_logout_user'){ const email=(msg.payload&&msg.payload.email||'').toLowerCase(); const me=await getCurrentUser(); if(me && (me.email||'').toLowerCase()===email){ await clearCurrentUser(); window.location.href='index.html'; } } }; } catch(_) {}
+</script>
+</body>
+</html>

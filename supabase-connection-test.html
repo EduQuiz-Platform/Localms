@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Connection Test</title>
+</head>
+<body>
+    <h1>Supabase Connection Test</h1>
+    <button id="connectBtn">Connect to Supabase</button>
+    <div id="status"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script>
+        const supabaseUrl = 'https://upkfvgggtqtghmdhquhj.supabase.co';
+        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase API key
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            const { data, error } = await supabase
+                .from('your_table') // Replace with your table name
+                .select('*');
+
+            const statusDiv = document.getElementById('status');
+            if (error) {
+                statusDiv.innerHTML = '<p>Error: ' + error.message + '</p>';
+            } else {
+                statusDiv.innerHTML = '<p>Connected Successfully! Data: ' + JSON.stringify(data) + '</p>';
+            }
+        });
+    </script>
+</body>
+</html>

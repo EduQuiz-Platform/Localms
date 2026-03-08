@@ -3,711 +3,576 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SmartLMS - Auth</title>
+  <title>SmartLMS - Login</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-    .container { width: min(420px, 92vw); background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); display: none; }
-    h2 { text-align: center; }
-    input, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; }
-    button { background: purple; color: #fff; font-weight: bold; cursor: pointer; }
-    button:hover { background: darkviolet; }
-    .note { text-align: center; font-size: 14px; }
-    .error { color: red; font-size: 13px; margin-top: -5px; min-height: 18px; }
-    .role-btn { display: block; padding: 12px; margin: 10px 0; background: purple; color: white; text-align: center; border-radius: 5px; text-decoration: none; font-weight: bold; }
-    .role-btn:hover { background: darkviolet; }
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    .container { width: min(420px, 100%); background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    h2 { text-align: center; color: #333; margin-top: 0; }
+    input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #ddd; box-sizing: border-box; font-size: 14px; }
+    input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; font-weight: bold; cursor: pointer; border: none; transition: transform 0.1s; }
+    button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .note { text-align: center; font-size: 14px; margin-top: 15px; }
+    .note a { color: #667eea; text-decoration: none; font-weight: 600; }
+    .note a:hover { text-decoration: underline; }
+    .error { color: #e53e3e; font-size: 13px; margin: 5px 0; min-height: 18px; }
+    .success { color: #38a169; font-size: 13px; margin: 5px 0; }
+    .role-btn { display: block; padding: 14px; margin: 12px 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; border-radius: 6px; text-decoration: none; font-weight: bold; transition: transform 0.1s; }
+    .role-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+    .view { display: none; }
+    .view.active { display: block; }
+    .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .banner { background: #fff4c2; border: 1px solid #ffd700; border-radius: 6px; padding: 10px; margin-bottom: 15px; text-align: center; font-size: 13px; display: none; }
     @media (max-width: 480px) {
-      body { align-items: flex-start; padding-top: 5vh; height: auto; }
-      .container { padding: 18px; border-radius: 8px; }
-      input, button { padding: 12px; }
+      .container { padding: 20px; }
+      body { align-items: flex-start; padding-top: 5vh; }
     }
   </style>
 </head>
 <body>
-  <!-- Landing -->
-  <div id="landing" class="container" style="display:block;">
-    <div id="maintBanner" style="display:none;background:#fff4c2;border:1px solid #e6e9ee;border-radius:6px;padding:6px 10px;margin-bottom:8px;text-align:center;font-size:13px"></div>
-    <h2>Select Role</h2>
-    <a href="#" class="role-btn" onclick="showSignup('student')">Student</a>
-    <a href="#" class="role-btn" onclick="showSignup('teacher')">Teacher</a>
-    <a href="#" class="role-btn" onclick="showSignup('admin')">Admin</a>
-    <p class="note"><a href="#" onclick="showLogin()">Already have an account? Sign in</a></p>
-  </div>
+  <div class="container">
+    <div id="maintBanner" class="banner"></div>
 
-  <!-- Signup -->
-  <div id="signup" class="container">
-    <div id="maintBannerSignup" style="display:none;background:#fff4c2;border:1px solid #e6e9ee;border-radius:6px;padding:6px 10px;margin-bottom:8px;text-align:center;font-size:13px"></div>
-    <h2 id="signup-title">Sign Up</h2>
-    <form id="signupForm" novalidate>
-      <input type="text" id="fullName" placeholder="Full Name" required>
-      <input type="email" id="email" placeholder="Email" required>
-      <input type="tel" id="phone" placeholder="Phone (optional)">
-      <input type="password" id="password" placeholder="Password" required>
-      <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
-      <input type="hidden" id="role">
-      <button type="submit">Create Account</button>
-      <p class="note"><a href="#" onclick="showLogin()">Already have an account? Sign in</a></p>
-    </form>
-    <p class="error" id="signupError"></p>
-  </div>
+    <!-- Landing / Role Selection -->
+    <div id="landing" class="view active">
+      <h2>Welcome to SmartLMS</h2>
+      <p style="text-align: center; color: #666; margin-bottom: 20px;">Select your role to get started</p>
+      <a href="#" class="role-btn" onclick="showSignup('student'); return false;">Student</a>
+      <a href="#" class="role-btn" onclick="showSignup('teacher'); return false;">Teacher</a>
+      <a href="#" class="role-btn" onclick="showSignup('admin'); return false;">Admin</a>
+      <p class="note"><a href="#" onclick="showLogin(); return false;">Already have an account? Sign in</a></p>
+    </div>
 
-  <!-- Login -->
-  <div id="login" class="container">
-    <div id="maintBannerLogin" style="display:none;background:#fff4c2;border:1px solid #e6e9ee;border-radius:6px;padding:6px 10px;margin-bottom:8px;text-align:center;font-size:13px"></div>
-    <h2>Login</h2>
-    <form id="loginForm" novalidate>
-      <input type="email" id="loginEmail" placeholder="Email" required>
-      <p class="error" id="loginEmailError"></p>
-      <input type="password" id="loginPassword" placeholder="Password" required>
-      <p class="error" id="loginPasswordError"></p>
-      <button type="submit">Login</button>
-    </form>
-    <p class="note"><a href="#" onclick="showReset()">Forgot Password?</a></p>
-    <p class="note"><a href="#" onclick="showSignup()">Create account</a></p>
-  </div>
+    <!-- Signup -->
+    <div id="signup" class="view">
+      <h2 id="signup-title">Sign Up</h2>
+      <form id="signupForm" onsubmit="handleSignup(event)">
+        <input type="text" id="fullName" placeholder="Full Name" required>
+        <input type="email" id="email" placeholder="Email" required autocomplete="email">
+        <input type="tel" id="phone" placeholder="Phone (optional)">
+        <input type="password" id="password" placeholder="Password (min 8 chars)" required autocomplete="new-password">
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" required autocomplete="new-password">
+        <input type="hidden" id="role">
+        <p class="error" id="signupError"></p>
+        <button type="submit" id="signupBtn">Create Account</button>
+        <p class="note"><a href="#" onclick="showLogin(); return false;">Already have an account? Sign in</a></p>
+      </form>
+    </div>
 
-  <!-- Reset Request -->
-  <div id="reset" class="container">
-    <div id="maintBannerReset" style="display:none;background:#fff4c2;border:1px solid #e6e9ee;border-radius:6px;padding:6px 10px;margin-bottom:8px;text-align:center;font-size:13px"></div>
-    <h2>Reset Password</h2>
-    <form id="resetForm" novalidate>
-      <input type="email" id="resetEmail" placeholder="Enter your email" required>
-      <button type="submit">Request Reset</button>
-    </form>
-    <p class="note"><a href="#" onclick="showLogin()">Back to login</a></p>
-    <p class="error" id="resetError"></p>
-  </div>
+    <!-- Login -->
+    <div id="login" class="view">
+      <h2>Login</h2>
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <input type="email" id="loginEmail" placeholder="Email" required autocomplete="email">
+        <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password">
+        <p class="error" id="loginError"></p>
+        <button type="submit" id="loginBtn">Login</button>
+      </form>
+      <p class="note"><a href="#" onclick="showReset(); return false;">Forgot Password?</a></p>
+      <p class="note"><a href="#" onclick="showLanding(); return false;">Back to role selection</a></p>
+    </div>
 
-  <!-- Set New Password (after temp login) -->
-  <div id="newPassword" class="container">
-    <h2>Set New Password</h2>
-    <form id="newPasswordForm" novalidate>
-      <input type="password" id="newPass" placeholder="New Password" required>
-      <input type="password" id="confirmNewPass" placeholder="Confirm New Password" required>
-      <button type="submit">Update Password</button>
-    </form>
-    <p class="error" id="newPasswordError"></p>
+    <!-- Reset Password Request -->
+    <div id="reset" class="view">
+      <h2>Reset Password</h2>
+      <p style="font-size: 14px; color: #666; text-align: center;">Enter your email to request a password reset. An admin will review your request.</p>
+      <form id="resetForm" onsubmit="handleResetRequest(event)">
+        <input type="email" id="resetEmail" placeholder="Enter your email" required>
+        <p class="error" id="resetError"></p>
+        <p class="success" id="resetSuccess"></p>
+        <button type="submit" id="resetBtn">Request Reset</button>
+      </form>
+      <p class="note"><a href="#" onclick="showLogin(); return false;">Back to login</a></p>
+    </div>
   </div>
 
   <script>
-    // ---- Utilities ----
-    const supportsIndexedDB = typeof indexedDB !== 'undefined';
-    const DB_NAME = 'smartlms-auth';
-    const DB_VERSION = 3; // v3 adds per-tab sessions store
+    // Initialize Supabase
+    const SUPABASE_URL = 'https://scgmwwomswamcyxtfhpr.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjZ213d29tc3dhbWN5eHRmaHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MjU4MTAsImV4cCI6MjA4ODUwMTgxMH0.ptmhYha50Kg1ZxQesqD_FjARVLlXL6hcerKGncoEhrY';
 
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Utility functions
     function normalizeEmail(email) {
       return (email || '').trim().toLowerCase();
     }
 
-    // Maintenance helpers (shared)
-    async function getMaintenance() {
-      if (!supportsIndexedDB) {
-        try { return JSON.parse(localStorage.getItem('maintenance')||'{}')||{}; } catch(_) { return {}; }
-      }
-      const db = await openDB();
-      return new Promise((resolve)=>{
-        const tx = db.transaction('meta','readonly');
-        const st = tx.objectStore('meta');
-        const r = st.get('maintenance');
-        r.onsuccess = ()=> resolve(r.result? r.result.value : {});
-        r.onerror = ()=> resolve({});
-      });
-    }
-    function isActiveMaintenance(m){
-      const now = Date.now();
-      if(m.enabled && m.manualUntil && now < m.manualUntil) return true;
-      const schedules = Array.isArray(m.schedules)? m.schedules:[];
-      return schedules.some(s => now>=s.startAt && now<=s.endAt);
-    }
-    function getUpcomingMaintenance(m){
-      const now = Date.now();
-      const schedules = (Array.isArray(m.schedules)? m.schedules:[]).filter(s=> s.startAt>now).sort((a,b)=>a.startAt-b.startAt);
-      return schedules[0] || null;
+    function showView(viewId) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
     }
 
-    function getActiveMaintenanceEnd(m){
-      const now = Date.now();
-      if(m && m.manualUntil && now < m.manualUntil) return m.manualUntil;
-      const s = (Array.isArray(m.schedules)? m.schedules:[]).find(s => now>=s.startAt && now<=s.endAt);
-      return s ? s.endAt : null;
+    function showLanding() { showView('landing'); }
+    function showLogin() { showView('login'); }
+    function showReset() { showView('reset'); }
+    function showSignup(role) {
+      document.getElementById('signup-title').innerText = role ? `Sign Up as ${role.charAt(0).toUpperCase() + role.slice(1)}` : 'Sign Up';
+      document.getElementById('role').value = role || 'student';
+      showView('signup');
     }
 
-    // Listen for maintenance broadcasts for tabs without IndexedDB session control
-    try {
-      const bc = new BroadcastChannel('smartlms_maint');
-      bc.onmessage = async (ev)=>{ const msg = ev.data||{}; if(msg.type==='maintenance_active'){ await updateMaintBanners(); } if(msg.type==='maintenance_disabled'){ await updateMaintBanners(); } };
-    } catch(_) {}
-    window.addEventListener('storage', async (e)=>{
-      if(e.key==='smartlms_maint_broadcast'){
-        try{ const msg = JSON.parse(e.newValue||'{}'); if(msg && msg.type==='force_logout_user'){ const me = await getCurrentUser(); if(me && (me.email||'').toLowerCase() === ((msg.payload&&msg.payload.email||'').toLowerCase())){ await clearCurrentUser(); return; } } }catch(_){ }
-        await updateMaintBanners();
-      }
-    });
-
-    function mountMaintBanners(){
-      return {
-        landing: document.getElementById('maintBanner'),
-        signup: document.getElementById('maintBannerSignup'),
-        login: document.getElementById('maintBannerLogin'),
-        reset: document.getElementById('maintBannerReset'),
-      };
+    function showError(elementId, message) {
+      document.getElementById(elementId).innerText = message;
     }
 
-    async function updateMaintBanners(){
-      const m = await getMaintenance();
-      const b = mountMaintBanners();
-      const banners = [b.landing,b.signup,b.login,b.reset];
-      const showText = (el, text)=>{ if(!el) return; if(text){ el.style.display='block'; el.textContent=text; } else { el.style.display='none'; el.textContent=''; } };
-      if(isActiveMaintenance(m)){
-        const until = m.manualUntil || (m.schedules||[]).find(s=> Date.now()>=s.startAt && Date.now()<=s.endAt)?.endAt;
-        const remain = Math.max(0, (until||Date.now()) - Date.now());
-        const h = Math.floor(remain/3600000);
-        const mm = Math.floor((remain%3600000)/60000);
-        const ss = Math.floor((remain%60000)/1000);
-        const msg = `System maintenance ACTIVE — restores in ${h}h ${mm}m ${ss}s (until ${new Date(until||Date.now()).toLocaleString()})`;
-        banners.forEach(el=> showText(el, msg));
+    function clearError(elementId) {
+      document.getElementById(elementId).innerText = '';
+    }
+
+    function setButtonLoading(buttonId, loading) {
+      const btn = document.getElementById(buttonId);
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading"></span>';
       } else {
-        const up = getUpcomingMaintenance(m);
-        if(up){
-          const remain = Math.max(0, up.startAt - Date.now());
-          const h = Math.floor(remain/3600000);
-          const mm = Math.floor((remain%3600000)/60000);
-          const ss = Math.floor((remain%60000)/1000);
-          const msg = `Upcoming system maintenance — starts in ${h}h ${mm}m ${ss}s (at ${new Date(up.startAt).toLocaleString()})`;
-          banners.forEach(el=> showText(el, msg));
-        } else {
-          banners.forEach(el=> showText(el, null));
-        }
+        btn.disabled = false;
+        btn.innerHTML = btn.id.includes('signup') ? 'Create Account' : btn.id.includes('login') ? 'Login' : 'Request Reset';
       }
     }
 
-    function isAccountLocked(user) {
-      return !!(user && user.lockedUntil && Date.now() < user.lockedUntil);
-    }
-
-    function isStrongPassword(pass) {
-      if (!pass || pass.length < 8) return false;
-      const hasLetter = /[A-Za-z]/.test(pass);
-      const hasNumber = /\d/.test(pass);
+    // Password validation
+    function isStrongPassword(password) {
+      if (!password || password.length < 8) return false;
+      const hasLetter = /[A-Za-z]/.test(password);
+      const hasNumber = /\d/.test(password);
       return hasLetter && hasNumber;
     }
 
-    // ---- IndexedDB helpers ----
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains('users')) {
-            const users = db.createObjectStore('users', { keyPath: 'email' });
-            users.createIndex('email', 'email', { unique: true });
-          }
-          if (!db.objectStoreNames.contains('meta')) {
-            db.createObjectStore('meta', { keyPath: 'key' });
-          }
-          if (!db.objectStoreNames.contains('sessions')) {
-            db.createObjectStore('sessions', { keyPath: 'id' });
-          }
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-    }
+    // Signup handler
+    async function handleSignup(event) {
+      event.preventDefault();
+      clearError('signupError');
 
-    async function idbGetAllUsers() {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('users', 'readonly');
-        const store = tx.objectStore('users');
-        const r = store.getAll();
-        r.onsuccess = () => resolve(r.result || []);
-        r.onerror = () => reject(r.error);
-      });
-    }
-
-    async function idbReplaceAllUsers(users) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('users', 'readwrite');
-        const store = tx.objectStore('users');
-        const clearReq = store.clear();
-        clearReq.onerror = () => reject(clearReq.error);
-        clearReq.onsuccess = () => {
-          (users || []).forEach(u => { try { store.put(u); } catch (_) {} });
-        };
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error);
-      });
-    }
-
-    async function idbPutUser(user) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('users', 'readwrite');
-        const store = tx.objectStore('users');
-        store.put(user);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-
-    // v3 session helpers
-    function getSessionId() {
-      let sid = sessionStorage.getItem('sessionId');
-      if (!sid) {
-        sid = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-        sessionStorage.setItem('sessionId', sid);
-      }
-      return sid;
-    }
-
-    async function idbGetSessionUser(sessionId) {
-      const db = await openDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction('sessions', 'readonly');
-        const store = tx.objectStore('sessions');
-        const r = store.get(sessionId);
-        r.onsuccess = () => resolve(r.result ? r.result.user : null);
-        r.onerror = () => resolve(null);
-      });
-    }
-
-    async function idbSetSessionUser(sessionId, user) {
-      const db = await openDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction('sessions', 'readwrite');
-        const store = tx.objectStore('sessions');
-        store.put({ id: sessionId, user });
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-      });
-    }
-
-    async function idbClearSessionUser(sessionId) {
-      const db = await openDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction('sessions', 'readwrite');
-        tx.objectStore('sessions').delete(sessionId);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-      });
-    }
-
-    async function migrateLocalStorageToIDBIfNeeded() {
-      if (!supportsIndexedDB) return;
-      try {
-        const existing = await idbGetAllUsers();
-        if (existing && existing.length > 0) return;
-        const lsUsersRaw = localStorage.getItem('users');
-        if (lsUsersRaw) {
-          try {
-            const lsUsers = JSON.parse(lsUsersRaw) || [];
-            if (Array.isArray(lsUsers) && lsUsers.length) {
-              await idbReplaceAllUsers(lsUsers);
-            }
-          } catch (_) {}
-        }
-        const lsCurrentRaw = localStorage.getItem('currentUser');
-        if (lsCurrentRaw) {
-          try {
-            const cu = JSON.parse(lsCurrentRaw);
-            await idbSetCurrentUser(cu);
-          } catch (_) {}
-        }
-        // Clean up LS after migration to avoid divergence
-        localStorage.removeItem('users');
-        localStorage.removeItem('currentUser');
-      } catch (_) {
-        // Ignore migration errors; fallback continues to work
-      }
-    }
-
-    // ---- Storage API (IndexedDB with localStorage fallback) ----
-    async function getUsers() {
-      if (supportsIndexedDB) {
-        try { return await idbGetAllUsers(); } catch (_) {}
-      }
-      return JSON.parse(localStorage.getItem('users')) || [];
-    }
-
-    async function saveUsers(users) {
-      if (supportsIndexedDB) {
-        try { await idbReplaceAllUsers(users); return; } catch (_) {}
-      }
-      localStorage.setItem('users', JSON.stringify(users || []));
-    }
-
-    // Per-tab session API
-    async function setCurrentUser(user) {
-      const sid = getSessionId();
-      if (supportsIndexedDB) {
-        try { await idbSetSessionUser(sid, user); return; } catch (_) {}
-      }
-      sessionStorage.setItem('currentUser', JSON.stringify(user));
-    }
-
-    async function getCurrentUser() {
-      const sid = getSessionId();
-      if (supportsIndexedDB) {
-        try { return await idbGetSessionUser(sid); } catch (_) {}
-      }
-      const raw = sessionStorage.getItem('currentUser');
-      return raw ? JSON.parse(raw) : null;
-    }
-
-    async function clearCurrentUser() {
-      const sid = getSessionId();
-      if (supportsIndexedDB) {
-        try { await idbClearSessionUser(sid); } catch (_) {}
-      }
-      sessionStorage.removeItem('currentUser');
-    }
-
-    // ---- Section Switching ----
-    function showSection(id) {
-      document.querySelectorAll('.container').forEach(c => c.style.display = 'none');
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'block';
-    }
-    function showSignup(role) {
-      document.getElementById('signup-title').innerText = role ? `Sign Up as ${role}` : 'Sign Up';
-      document.getElementById('role').value = role || 'student';
-      showSection('signup');
-    }
-    function showLogin() { showSection('login'); }
-    function showReset() { showSection('reset'); }
-    function showNewPassword() { showSection('newPassword'); }
-
-    // ---- Signup ----
-    document.getElementById('signupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const m = await getMaintenance();
-      if(isActiveMaintenance(m)){
-        const untilTs = getActiveMaintenanceEnd(m);
-        const untilStr = untilTs ? new Date(untilTs).toLocaleString() : 'the scheduled end time';
-        alert(`System is currently undergoing maintenance. Signups are disabled until ${untilStr}.`);
-        return;
-      }
-      const upcoming = getUpcomingMaintenance(m);
-      if(upcoming){ alert(`Upcoming system maintenance: ${new Date(upcoming.startAt).toLocaleString()}`); }
-      const fullName = (document.getElementById('fullName').value || '').trim();
+      const fullName = document.getElementById('fullName').value.trim();
       const email = normalizeEmail(document.getElementById('email').value);
-      const phone = (document.getElementById('phone').value || '').trim();
+      const phone = document.getElementById('phone').value.trim();
       const password = document.getElementById('password').value;
-      const confirm = document.getElementById('confirmPassword').value;
-      const role = (document.getElementById('role').value || 'student');
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const role = document.getElementById('role').value || 'student';
 
-      const errorEl = document.getElementById('signupError');
-      errorEl.innerText = '';
-
-      let users = await getUsers();
-      const existing = users.find(u => u.email === email);
-      if (existing) {
-        if (existing.resetRequest && (existing.resetRequest.status === 'pending' || existing.resetRequest.status === 'approved')) {
-          errorEl.innerText = 'This account has an active password reset request. You cannot sign up again.';
-          return;
-        }
-        errorEl.innerText = 'Account with this email already exists.';
+      if (!fullName || !email) {
+        showError('signupError', 'Name and email are required');
         return;
       }
-      if (password !== confirm) {
-        errorEl.innerText = 'Passwords do not match.';
+
+      if (password !== confirmPassword) {
+        showError('signupError', 'Passwords do not match');
         return;
       }
+
       if (!isStrongPassword(password)) {
-        errorEl.innerText = 'Password must be at least 8 chars with letters and numbers.';
+        showError('signupError', 'Password must be at least 8 characters with letters and numbers');
         return;
       }
 
-      const user = {
-        fullName, email, phone, password, role,
-        createdAt: Date.now(), failedAttempts: 0, lockedUntil: null,
-        lockouts: 0, flagged: false, resetRequest: null, active: true, notifications: []
-      };
-      users.push(user);
-      await saveUsers(users);
-      await setCurrentUser(user);
+      setButtonLoading('signupBtn', true);
 
-      alert(`Welcome ${fullName}! Your ${role} account has been created.`);
-      redirectByRole(role);
-    });
+      try {
+        // Check maintenance mode
+        const { data: maintenance } = await supabase
+          .from('maintenance_schedules')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
 
-    // ---- Login ----
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = normalizeEmail(document.getElementById('loginEmail').value);
-      const m = await getMaintenance();
-      if(isActiveMaintenance(m)){
-        let allow = false;
-        try {
-          const users = await getUsers();
-          const u = users.find(u => u.email === email);
-          allow = !!(u && u.role === 'admin');
-        } catch(_){ allow = false; }
-        if(!allow){
-          const untilTs = getActiveMaintenanceEnd(m);
-          const untilStr = untilTs ? new Date(untilTs).toLocaleString() : 'the scheduled end time';
-          alert(`System is currently undergoing maintenance. Only admin login allowed until ${untilStr}.`);
+        if (maintenance && isActiveMaintenance(maintenance)) {
+          showError('signupError', 'System is under maintenance. Please try again later.');
+          setButtonLoading('signupBtn', false);
           return;
         }
-      }
-      const upcoming = getUpcomingMaintenance(m);
-      if(upcoming){ alert(`Upcoming system maintenance: ${new Date(upcoming.startAt).toLocaleString()}`); }
-      
-      const password = document.getElementById('loginPassword').value;
-      let users = await getUsers();
-      let user = users.find(u => u.email === email);
 
-      document.getElementById('loginEmailError').innerText = '';
-      document.getElementById('loginPasswordError').innerText = '';
-
-      if (!user) {
-        document.getElementById('loginEmailError').innerText = 'No account found with this email';
-        return;
-      }
-      if (!user.active) {
-        document.getElementById('loginEmailError').innerText = 'Your account has been deactivated by an administrator.';
-        return;
-      }
-
-      // Handle expired reset requests (approved or pending beyond expiry)
-      if (user.resetRequest && user.resetRequest.expiresAt && Date.now() > user.resetRequest.expiresAt) {
-        user.resetRequest = null;
-        users = users.map(u => u.email === user.email ? user : u);
-        await saveUsers(users);
-      }
-
-      if (user.resetRequest) {
-        if (user.resetRequest.status === 'pending') {
-          document.getElementById('loginPasswordError').innerText = 'Password reset request pending admin review.';
-          return;
-        }
-        if (user.resetRequest.status === 'approved') {
-          // Only allow login if using temp password and not expired
-          if (user.resetRequest.expiresAt && Date.now() > user.resetRequest.expiresAt) {
-            user.resetRequest = null;
-            users = users.map(u => u.email === user.email ? user : u);
-            await saveUsers(users);
-            document.getElementById('loginPasswordError').innerText = 'Temporary password expired. Please request a new reset.';
-            return;
+        // Sign up with Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              role,
+              phone
+            }
           }
-          if (password === user.resetRequest.tempPassword) {
-            await setCurrentUser(user);
-            showNewPassword();
-            return;
+        });
+
+        if (authError) {
+          if (authError.message.includes('already registered')) {
+            showError('signupError', 'An account with this email already exists');
           } else {
-            document.getElementById('loginPasswordError').innerText = `Your reset request is approved. Use this temporary password: ${user.resetRequest.tempPassword}`;
+            showError('signupError', authError.message);
+          }
+          setButtonLoading('signupBtn', false);
+          return;
+        }
+
+        if (authData.user) {
+          // Create profile using edge function
+          try {
+            await supabase.functions.invoke('handle-new-user', {
+              body: {
+                user_id: authData.user.id,
+                email,
+                full_name: fullName,
+                role,
+                phone
+              }
+            });
+          } catch (e) {
+            console.error('Profile creation error:', e);
+          }
+
+          alert(`Welcome ${fullName}! Your ${role} account has been created successfully.`);
+          redirectByRole(role);
+        }
+      } catch (error) {
+        console.error('Signup error:', error);
+        showError('signupError', 'An error occurred during signup. Please try again.');
+      } finally {
+        setButtonLoading('signupBtn', false);
+      }
+    }
+
+    // Login handler
+    async function handleLogin(event) {
+      event.preventDefault();
+      clearError('loginError');
+
+      const email = normalizeEmail(document.getElementById('loginEmail').value);
+      const password = document.getElementById('loginPassword').value;
+
+      if (!email || !password) {
+        showError('loginError', 'Email and password are required');
+        return;
+      }
+
+      setButtonLoading('loginBtn', true);
+
+      try {
+        // Check maintenance mode first
+        const { data: maintenance } = await supabase
+          .from('maintenance_schedules')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        // Check if user profile exists and get role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, active, locked_until, flagged')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (maintenance && isActiveMaintenance(maintenance)) {
+          if (!profile || profile.role !== 'admin') {
+            showError('loginError', 'System is under maintenance. Only admin login is allowed.');
+            setButtonLoading('loginBtn', false);
             return;
           }
         }
-        if (user.resetRequest.status === 'denied') {
-          document.getElementById('loginPasswordError').innerText = 'Your reset request was denied. You may request a new reset.';
+
+        // Check if account is active
+        if (profile && !profile.active) {
+          showError('loginError', 'Your account has been deactivated. Please contact an administrator.');
+          setButtonLoading('loginBtn', false);
           return;
         }
-      }
 
-      if (isAccountLocked(user)) {
-        const mins = Math.ceil((user.lockedUntil - Date.now()) / 60000);
-        document.getElementById('loginPasswordError').innerText = `Account is locked. Try again in ${mins} minutes`;
-        return;
-      }
-
-      if (user.password !== password) {
-        user.failedAttempts++;
-        if (user.failedAttempts >= 5) {
-          user.lockedUntil = Date.now() + 30 * 60000;
-          user.failedAttempts = 0;
-          user.lockouts++;
-          if (user.lockouts >= 3) user.flagged = true;
-          document.getElementById('loginPasswordError').innerText = 'Too many failed attempts. Account locked for 30 minutes';
-        } else {
-          const remain = 5 - user.failedAttempts;
-          document.getElementById('loginPasswordError').innerText = `Invalid password. ${remain} attempts remaining`;
+        // Check if account is locked
+        if (profile && profile.locked_until && new Date(profile.locked_until) > new Date()) {
+          const minutes = Math.ceil((new Date(profile.locked_until) - new Date()) / 60000);
+          showError('loginError', `Account is locked. Try again in ${minutes} minutes.`);
+          setButtonLoading('loginBtn', false);
+          return;
         }
-        users = users.map(u => u.email === user.email ? user : u);
-        await saveUsers(users);
-        return;
+
+        // Check if account is flagged
+        if (profile && profile.flagged) {
+          showError('loginError', 'Your account has been flagged. Please contact an administrator.');
+          setButtonLoading('loginBtn', false);
+          return;
+        }
+
+        // Attempt login
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (authError) {
+          // Increment failed attempts
+          if (profile) {
+            const { data: currentProfile } = await supabase
+              .from('profiles')
+              .select('id, failed_attempts, lockouts')
+              .eq('email', email)
+              .maybeSingle();
+
+            if (currentProfile) {
+              const failedAttempts = (currentProfile.failed_attempts || 0) + 1;
+              let updates = { failed_attempts: failedAttempts };
+
+              if (failedAttempts >= 5) {
+                updates.locked_until = new Date(Date.now() + 30 * 60000).toISOString();
+                updates.failed_attempts = 0;
+                updates.lockouts = (currentProfile.lockouts || 0) + 1;
+
+                if (updates.lockouts >= 3) {
+                  updates.flagged = true;
+                }
+
+                await supabase
+                  .from('profiles')
+                  .update(updates)
+                  .eq('id', currentProfile.id);
+
+                showError('loginError', 'Too many failed attempts. Account locked for 30 minutes.');
+              } else {
+                await supabase
+                  .from('profiles')
+                  .update(updates)
+                  .eq('id', currentProfile.id);
+
+                showError('loginError', `Invalid password. ${5 - failedAttempts} attempts remaining.`);
+              }
+            } else {
+              showError('loginError', 'Invalid email or password');
+            }
+          } else {
+            showError('loginError', 'Invalid email or password');
+          }
+          setButtonLoading('loginBtn', false);
+          return;
+        }
+
+        if (authData.user && profile) {
+          // Reset failed attempts on successful login
+          await supabase
+            .from('profiles')
+            .update({ failed_attempts: 0, locked_until: null })
+            .eq('email', email);
+
+          // Log activity
+          await supabase
+            .from('activities')
+            .insert({
+              user_id: authData.user.id,
+              action: 'user_login',
+              description: 'User logged in successfully'
+            });
+
+          alert(`Welcome back!`);
+          redirectByRole(profile.role);
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showError('loginError', 'An error occurred during login. Please try again.');
+      } finally {
+        setButtonLoading('loginBtn', false);
       }
+    }
 
-      // normal login
-      user.failedAttempts = 0;
-      user.lockedUntil = null;
-      users = users.map(u => u.email === user.email ? user : u);
-      await saveUsers(users);
-      await setCurrentUser(user);
+    // Password reset request handler
+    async function handleResetRequest(event) {
+      event.preventDefault();
+      clearError('resetError');
+      document.getElementById('resetSuccess').innerText = '';
 
-      alert(`Welcome back ${user.fullName}!`);
-      redirectByRole(user.role);
-    });
-
-    // ---- Reset ----
-    document.getElementById('resetForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
       const email = normalizeEmail(document.getElementById('resetEmail').value);
-      const m = await getMaintenance();
-      if(isActiveMaintenance(m)){
-        try {
-          const users = await getUsers();
-          const u = users.find(u => u.email === email);
-          if(!(u && u.role === 'admin')){
-            const untilTs = getActiveMaintenanceEnd(m);
-            const untilStr = untilTs ? new Date(untilTs).toLocaleString() : 'the scheduled end time';
-            document.getElementById('resetError').innerText = `System is currently undergoing maintenance. No reset allowed until ${untilStr}.`;
-            return;
-          }
-        } catch(_){
-          const untilTs = getActiveMaintenanceEnd(m);
-          const untilStr = untilTs ? new Date(untilTs).toLocaleString() : 'the scheduled end time';
-          document.getElementById('resetError').innerText = `System is currently undergoing maintenance. No reset allowed until ${untilStr}.`;
+
+      if (!email) {
+        showError('resetError', 'Email is required');
+        return;
+      }
+
+      setButtonLoading('resetBtn', true);
+
+      try {
+        // Get profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email, active, flagged, locked_until')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (!profile) {
+          showError('resetError', 'No account found with this email');
+          setButtonLoading('resetBtn', false);
           return;
         }
-      }
-      const upcoming = getUpcomingMaintenance(m);
-      if(upcoming){ document.getElementById('resetError').innerText = `Upcoming system maintenance: ${new Date(upcoming.startAt).toLocaleString()}`; }
-      
-      let users = await getUsers();
-      let user = users.find(u => u.email === email);
 
-      const err = document.getElementById('resetError');
-      err.innerText = '';
-
-      if (!user) {
-        err.innerText = 'No account found with this email';
-        return;
-      }
-      if (!user.active) {
-        err.innerText = 'Your account has been deactivated.';
-        return;
-      }
-      if (user.flagged) {
-        err.innerText = 'Your account is flagged. Please contact admin for support.';
-        return;
-      }
-      if (isAccountLocked(user)) {
-        err.innerText = 'Your account is locked due to failed attempts. Try again later.';
-        return;
-      }
-
-      // Expire old reset automatically
-      if (user.resetRequest && user.resetRequest.expiresAt && Date.now() > user.resetRequest.expiresAt) {
-        user.resetRequest = null;
-      }
-
-      if (user.resetRequest) {
-        if (user.resetRequest.status === 'pending') {
-          err.innerText = 'Reset request already pending review.';
+        if (!profile.active) {
+          showError('resetError', 'Your account has been deactivated');
+          setButtonLoading('resetBtn', false);
           return;
         }
-        if (user.resetRequest.status === 'approved') {
-          err.innerText = 'Reset already approved. Please use your temporary password to login.';
+
+        if (profile.flagged) {
+          showError('resetError', 'Your account is flagged. Please contact admin for support.');
+          setButtonLoading('resetBtn', false);
           return;
         }
+
+        if (profile.locked_until && new Date(profile.locked_until) > new Date()) {
+          showError('resetError', 'Your account is locked. Try again later.');
+          setButtonLoading('resetBtn', false);
+          return;
+        }
+
+        // Check for existing pending request
+        const { data: existingRequest } = await supabase
+          .from('password_reset_requests')
+          .select('*')
+          .eq('user_id', profile.id)
+          .eq('status', 'pending')
+          .maybeSingle();
+
+        if (existingRequest) {
+          showError('resetError', 'Reset request already pending review');
+          setButtonLoading('resetBtn', false);
+          return;
+        }
+
+        // Generate temporary password
+        const tempPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase();
+
+        // Create reset request
+        const { error: requestError } = await supabase
+          .from('password_reset_requests')
+          .insert({
+            user_id: profile.id,
+            status: 'pending',
+            temp_password: tempPassword,
+            expires_at: new Date(Date.now() + 72 * 3600 * 1000).toISOString()
+          });
+
+        if (requestError) {
+          showError('resetError', 'Failed to create reset request. Please try again.');
+          setButtonLoading('resetBtn', false);
+          return;
+        }
+
+        // Create notification
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: profile.id,
+            type: 'reset_requested',
+            message: 'Password reset requested and pending admin review.'
+          });
+
+        document.getElementById('resetSuccess').innerText = 'Password reset request submitted. An admin will review it shortly.';
+        setTimeout(() => showLogin(), 3000);
+      } catch (error) {
+        console.error('Reset request error:', error);
+        showError('resetError', 'An error occurred. Please try again.');
+      } finally {
+        setButtonLoading('resetBtn', false);
       }
+    }
 
-      const tempPassword = Math.random().toString(36).slice(-8);
-      user.resetRequest = {
-        status: 'pending',
-        tempPassword,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + 72 * 3600 * 1000,
-        denialReason: null
-      };
-      user.notifications = user.notifications || [];
-      user.notifications.push({
-        type: 'reset_requested',
-        at: Date.now(),
-        message: 'Password reset requested and pending admin review.'
-      });
-
-      users = users.map(u => u.email === user.email ? user : u);
-      await saveUsers(users);
-
-      alert('Password reset request submitted. Admin will review it.');
-      showLogin();
-    });
-
-    // ---- New Password ----
-    document.getElementById('newPasswordForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      let user = await getCurrentUser();
-      let users = await getUsers();
-
-      const newPass = document.getElementById('newPass').value;
-      const confirm = document.getElementById('confirmNewPass').value;
-
-      const err = document.getElementById('newPasswordError');
-      err.innerText = '';
-
-      if (!user) {
-        err.innerText = 'Session expired. Please login again with temporary password.';
-        showLogin();
-        return;
-      }
-
-      // Validate reset approval still valid
-      const freshUser = users.find(u => u.email === user.email) || user;
-      if (!freshUser.resetRequest || freshUser.resetRequest.status !== 'approved') {
-        err.innerText = 'No active reset found. Please request a new reset.';
-        showReset();
-        return;
-      }
-      if (freshUser.resetRequest.expiresAt && Date.now() > freshUser.resetRequest.expiresAt) {
-        freshUser.resetRequest = null;
-        users = users.map(u => u.email === freshUser.email ? freshUser : u);
-        await saveUsers(users);
-        err.innerText = 'Temporary password expired. Please request a new reset.';
-        showReset();
-        return;
-      }
-
-      if (newPass !== confirm) {
-        err.innerText = 'Passwords do not match.';
-        return;
-      }
-      if (!isStrongPassword(newPass)) {
-        err.innerText = 'Password must be at least 8 chars with letters and numbers.';
-        return;
-      }
-
-      // update password and clear reset request
-      freshUser.password = newPass;
-      freshUser.resetRequest = null;
-      freshUser.notifications = freshUser.notifications || [];
-      freshUser.notifications.push({ type: 'password_updated', at: Date.now(), message: 'Password updated after reset.' });
-
-      users = users.map(u => u.email === freshUser.email ? freshUser : u);
-      await saveUsers(users);
-      await setCurrentUser(freshUser);
-
-      alert('Password successfully reset. You can now login with your new password.');
-      showLogin();
-    });
-
-    // ---- Redirect ----
+    // Redirect by role
     function redirectByRole(role) {
       if (role === 'student') window.location.href = 'student.html';
       else if (role === 'teacher') window.location.href = 'teacher.html';
       else if (role === 'admin') window.location.href = 'admin.html';
+      else window.location.href = 'student.html';
     }
 
-    // ---- Initialize ----
-    (async function init() {
-      if (supportsIndexedDB) {
-        try { await migrateLocalStorageToIDBIfNeeded(); } catch (_) {}
-      }
-      // show maintenance banners with countdowns
-      await updateMaintBanners();
-      setInterval(updateMaintBanners, 1000);
-      // Legacy global session migration (from v1): if meta.currentUser or LS currentUser exists, attach to this tab session
+    // Maintenance helpers
+    function isActiveMaintenance(m) {
+      if (!m) return false;
+      const now = Date.now();
+      if (m.enabled && m.manual_until && now < new Date(m.manual_until).getTime()) return true;
+      const schedules = Array.isArray(m.schedules) ? m.schedules : [];
+      return schedules.some(s => {
+        const start = new Date(s.startAt).getTime();
+        const end = new Date(s.endAt).getTime();
+        return now >= start && now <= end;
+      });
+    }
+
+    function getUpcomingMaintenance(m) {
+      if (!m) return null;
+      const now = Date.now();
+      const schedules = (Array.isArray(m.schedules) ? m.schedules : [])
+        .filter(s => new Date(s.startAt).getTime() > now)
+        .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+      return schedules[0] || null;
+    }
+
+    async function updateMaintenanceBanner() {
       try {
-        const legacy = localStorage.getItem('currentUser');
-        if (legacy) {
-          const parsed = JSON.parse(legacy);
-          await setCurrentUser(parsed);
-          localStorage.removeItem('currentUser');
+        const { data: maintenance } = await supabase
+          .from('maintenance_schedules')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        const banner = document.getElementById('maintBanner');
+        if (!banner) return;
+
+        if (isActiveMaintenance(maintenance)) {
+          const until = maintenance.manual_until ? new Date(maintenance.manual_until).getTime() :
+                       (maintenance.schedules || []).find(s => {
+                         const now = Date.now();
+                         const start = new Date(s.startAt).getTime();
+                         const end = new Date(s.endAt).getTime();
+                         return now >= start && now <= end;
+                       })?.endAt;
+
+          if (until) {
+            const remain = Math.max(0, new Date(until).getTime() - Date.now());
+            const h = Math.floor(remain / 3600000);
+            const mm = Math.floor((remain % 3600000) / 60000);
+            const ss = Math.floor((remain % 60000) / 1000);
+            banner.style.display = 'block';
+            banner.textContent = `System maintenance ACTIVE — restores in ${h}h ${mm}m ${ss}s`;
+          }
+        } else {
+          const upcoming = getUpcomingMaintenance(maintenance);
+          if (upcoming) {
+            const remain = Math.max(0, new Date(upcoming.startAt).getTime() - Date.now());
+            const h = Math.floor(remain / 3600000);
+            const mm = Math.floor((remain % 3600000) / 60000);
+            banner.style.display = 'block';
+            banner.textContent = `Upcoming maintenance — starts in ${h}h ${mm}m`;
+          } else {
+            banner.style.display = 'none';
+          }
         }
-      } catch (_) {}
-      showSection('landing');
+      } catch (error) {
+        console.error('Maintenance banner error:', error);
+      }
+    }
+
+    // Check if already logged in
+    async function checkExistingSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (profile) {
+            redirectByRole(profile.role);
+          }
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      }
+    }
+
+    // Initialize
+    (async function init() {
+      await checkExistingSession();
+      await updateMaintenanceBanner();
+      setInterval(updateMaintenanceBanner, 60000); // Update every minute
     })();
   </script>
 </body>

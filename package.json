@@ -1,0 +1,21 @@
+{
+  "name": "smartlms-supabase",
+  "version": "1.0.0",
+  "description": "SmartLMS with Supabase Backend Integration",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx http-server -p 3000",
+    "build": "echo 'Static HTML - No build required' && exit 0",
+    "test": "echo 'No tests configured' && exit 0"
+  },
+  "keywords": [
+    "lms",
+    "learning-management-system",
+    "supabase",
+    "education"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}
